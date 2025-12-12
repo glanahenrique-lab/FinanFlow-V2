@@ -49,7 +49,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { onAuthStateChanged, signOut, updateProfile, deleteUser, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from './services/firebase';
 import { AuthPage } from './components/AuthPage';
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment, GoalTransaction, UserProfile } from './types';
@@ -123,13 +123,6 @@ const getInvestmentStyle = (type: string) => {
     }
 };
 
-const initialTransactions: Transaction[] = [];
-const initialInstallments: InstallmentPurchase[] = [];
-const initialGoals: FinancialGoal[] = [];
-const initialSubscriptions: Subscription[] = [];
-const initialInvestments: Investment[] = [];
-const initialGoalTransactions: GoalTransaction[] = [];
-
 function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -149,30 +142,12 @@ function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Data State
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('transactions');
-    return saved ? JSON.parse(saved) : initialTransactions;
-  });
-  const [installments, setInstallments] = useState<InstallmentPurchase[]>(() => {
-    const saved = localStorage.getItem('installments');
-    return saved ? JSON.parse(saved) : initialInstallments;
-  });
-  const [goals, setGoals] = useState<FinancialGoal[]>(() => {
-    const saved = localStorage.getItem('goals');
-    return saved ? JSON.parse(saved) : initialGoals;
-  });
-  const [goalTransactions, setGoalTransactions] = useState<GoalTransaction[]>(() => {
-    const saved = localStorage.getItem('goalTransactions');
-    return saved ? JSON.parse(saved) : initialGoalTransactions;
-  });
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
-    const saved = localStorage.getItem('subscriptions');
-    return saved ? JSON.parse(saved) : initialSubscriptions;
-  });
-  const [investments, setInvestments] = useState<Investment[]>(() => {
-    const saved = localStorage.getItem('investments');
-    return saved ? JSON.parse(saved) : initialInvestments;
-  });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [installments, setInstallments] = useState<InstallmentPurchase[]>([]);
+  const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const [goalTransactions, setGoalTransactions] = useState<GoalTransaction[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
 
   // Modal States
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
@@ -205,7 +180,6 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // SEGURANÇA: Verificar se o e-mail está verificado
         if (!user.emailVerified) {
             await signOut(auth);
             setCurrentUser(null);
@@ -215,7 +189,6 @@ function App() {
 
         setCurrentUser(user);
         
-        // Tenta buscar dados do Firestore para garantir consistência
         try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
@@ -223,7 +196,6 @@ function App() {
                 setUserName(userData.name || user.displayName || 'Investidor');
                 setUserPhoto(userData.photo || null);
             } else {
-                // Fallback para Auth se doc não existir (não deveria acontecer no novo fluxo)
                 setUserName(user.displayName || 'Investidor');
                 const savedPhoto = localStorage.getItem(`user_photo_${user.uid}`);
                 setUserPhoto(savedPhoto);
@@ -237,11 +209,72 @@ function App() {
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
+        // Clear data
+        setTransactions([]);
+        setInstallments([]);
+        setGoals([]);
+        setGoalTransactions([]);
+        setSubscriptions([]);
+        setInvestments([]);
       }
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  // FIRESTORE SYNC EFFECT
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const uid = currentUser.uid;
+
+    const unsubTrans = onSnapshot(collection(db, "users", uid, "transactions"), (snap) => {
+      setTransactions(snap.docs.map(d => d.data() as Transaction));
+    });
+    const unsubInst = onSnapshot(collection(db, "users", uid, "installments"), (snap) => {
+      setInstallments(snap.docs.map(d => d.data() as InstallmentPurchase));
+    });
+    const unsubGoals = onSnapshot(collection(db, "users", uid, "goals"), (snap) => {
+      setGoals(snap.docs.map(d => d.data() as FinancialGoal));
+    });
+    const unsubGoalTrans = onSnapshot(collection(db, "users", uid, "goal_transactions"), (snap) => {
+      setGoalTransactions(snap.docs.map(d => d.data() as GoalTransaction));
+    });
+    const unsubSubs = onSnapshot(collection(db, "users", uid, "subscriptions"), (snap) => {
+      setSubscriptions(snap.docs.map(d => d.data() as Subscription));
+    });
+    const unsubInvest = onSnapshot(collection(db, "users", uid, "investments"), (snap) => {
+      setInvestments(snap.docs.map(d => d.data() as Investment));
+    });
+
+    return () => {
+      unsubTrans();
+      unsubInst();
+      unsubGoals();
+      unsubGoalTrans();
+      unsubSubs();
+      unsubInvest();
+    };
+  }, [currentUser]);
+
+  // Firestore Helpers
+  const saveData = async (collectionName: string, data: any) => {
+    if (!currentUser) return;
+    try {
+      await setDoc(doc(db, "users", currentUser.uid, collectionName, data.id), data);
+    } catch (e) {
+      console.error(`Erro ao salvar em ${collectionName}:`, e);
+    }
+  };
+
+  const deleteData = async (collectionName: string, id: string) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, collectionName, id));
+    } catch (e) {
+      console.error(`Erro ao deletar de ${collectionName}:`, e);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -249,28 +282,14 @@ function App() {
 
   const handleProfileUpdate = async (name: string, photo: string | null) => {
       if (!currentUser) return;
-      
       try {
-          // 1. Atualiza Auth do Firebase
           await updateProfile(currentUser, { displayName: name });
-          
-          // 2. Atualiza Firestore
           const userRef = doc(db, "users", currentUser.uid);
-          await updateDoc(userRef, {
-              name: name,
-              photo: photo
-          });
-
-          // 3. Atualiza Estado Local
+          await updateDoc(userRef, { name: name, photo: photo });
           setUserName(name);
           setUserPhoto(photo);
-
-          // Mantém backup no localStorage
-          if (photo) {
-              localStorage.setItem(`user_photo_${currentUser.uid}`, photo);
-          } else {
-              localStorage.removeItem(`user_photo_${currentUser.uid}`);
-          }
+          if (photo) localStorage.setItem(`user_photo_${currentUser.uid}`, photo);
+          else localStorage.removeItem(`user_photo_${currentUser.uid}`);
       } catch (error) {
           console.error("Erro ao atualizar perfil:", error);
           alert("Erro ao salvar alterações. Tente novamente.");
@@ -279,18 +298,11 @@ function App() {
 
   const handleDeleteAccount = async () => {
       if (!currentUser) return;
-      
       try {
-          // 1. Deletar documento do Firestore
           await deleteDoc(doc(db, "users", currentUser.uid));
-          
-          // 2. Deletar Usuário da Autenticação
           await deleteUser(currentUser);
-          
-          // 3. Limpar dados locais
           localStorage.removeItem(`user_photo_${currentUser.uid}`);
           setCurrentUser(null);
-          
       } catch (error: any) {
           console.error("Erro ao excluir conta:", error);
           if (error.code === 'auth/requires-recent-login') {
@@ -301,13 +313,7 @@ function App() {
       }
   };
 
-  // Persistence
-  useEffect(() => { localStorage.setItem('transactions', JSON.stringify(transactions)); }, [transactions]);
-  useEffect(() => { localStorage.setItem('installments', JSON.stringify(installments)); }, [installments]);
-  useEffect(() => { localStorage.setItem('goals', JSON.stringify(goals)); }, [goals]);
-  useEffect(() => { localStorage.setItem('goalTransactions', JSON.stringify(goalTransactions)); }, [goalTransactions]);
-  useEffect(() => { localStorage.setItem('subscriptions', JSON.stringify(subscriptions)); }, [subscriptions]);
-  useEffect(() => { localStorage.setItem('investments', JSON.stringify(investments)); }, [investments]);
+  // Local Preferences Persistence
   useEffect(() => { localStorage.setItem('appTheme', currentTheme); }, [currentTheme]);
   useEffect(() => { localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode)); }, [isDarkMode]);
 
@@ -341,15 +347,16 @@ function App() {
   };
 
   // Helper to log transaction automatically
-  const addTransactionRecord = (description: string, amount: number, category: string, type: 'income' | 'expense') => {
-    setTransactions(prev => [...prev, {
+  const addTransactionRecord = async (description: string, amount: number, category: string, type: 'income' | 'expense') => {
+    const newTrans = {
         id: generateId(),
         description,
         amount,
         category,
         type,
         date: new Date().toISOString().split('T')[0]
-    }]);
+    };
+    await saveData('transactions', newTrans);
   };
 
   /**
@@ -468,42 +475,45 @@ function App() {
   ];
 
   // Actions
-  const handleDelete = (id: string, type: string) => {
+  const handleDelete = async (id: string, type: string) => {
     setConfirmState({ isOpen: true, type, id, title: `Excluir ${type}?`, message: 'Essa ação não pode ser desfeita.' });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const { type, id } = confirmState;
-    if (type === 'Movimentação') setTransactions(prev => prev.filter(t => t.id !== id));
-    if (type === 'Parcelamento') setInstallments(prev => prev.filter(i => i.id !== id));
-    if (type === 'Meta') {
-        setGoals(prev => prev.filter(g => g.id !== id));
-        // Opcional: Remover histórico da meta também? Por segurança, vamos manter ou filtrar.
-    }
-    if (type === 'Assinatura') setSubscriptions(prev => prev.filter(s => s.id !== id));
-    if (type === 'Investimento') setInvestments(prev => prev.filter(i => i.id !== id));
+    if (!id) return;
+
+    if (type === 'Movimentação') await deleteData('transactions', id);
+    if (type === 'Parcelamento') await deleteData('installments', id);
+    if (type === 'Meta') await deleteData('goals', id);
+    if (type === 'Assinatura') await deleteData('subscriptions', id);
+    if (type === 'Investimento') await deleteData('investments', id);
+    
     setConfirmState({ isOpen: false, type: null, id: null, title: '', message: '' });
   };
 
-  const handleUpdateGoalBalance = (amount: number, type: 'add' | 'remove') => {
-    if (!selectedGoalId) return;
+  const handleUpdateGoalBalance = async (amount: number, type: 'add' | 'remove') => {
+    if (!selectedGoalId || !currentUser) return;
     
     const goal = goals.find(g => g.id === selectedGoalId);
     if (!goal) return;
 
-    const updatedGoals = goals.map(g => {
-      if (g.id === selectedGoalId) {
-        return { ...g, currentAmount: type === 'add' ? g.currentAmount + amount : Math.max(0, g.currentAmount - amount) };
-      }
-      return g;
+    // 1. Update Goal
+    const newAmount = type === 'add' ? goal.currentAmount + amount : Math.max(0, goal.currentAmount - amount);
+    await saveData('goals', { ...goal, currentAmount: newAmount });
+    
+    // 2. Add Goal Transaction History
+    const goalTransId = generateId();
+    await saveData('goal_transactions', { 
+        id: goalTransId, 
+        goalId: selectedGoalId, 
+        amount, 
+        date: new Date().toISOString(), 
+        type: type === 'add' ? 'deposit' : 'withdraw' 
     });
-    setGoals(updatedGoals);
     
-    // Add record to Goal History
-    setGoalTransactions(prev => [{ id: generateId(), goalId: selectedGoalId, amount, date: new Date().toISOString(), type: type === 'add' ? 'deposit' : 'withdraw' }, ...prev]);
-    
-    // Add record to General Transactions (Deduction/Income)
-    addTransactionRecord(
+    // 3. Add General Transaction
+    await addTransactionRecord(
         `${type === 'add' ? 'Aporte Meta' : 'Resgate Meta'}: ${goal.title}`,
         amount,
         'Metas',
@@ -520,72 +530,94 @@ function App() {
   };
   
   // Installment Logic
-  const handleDelayInstallment = (interestAmount: number) => {
-      if (!delayModal.installmentId) return;
+  const handleDelayInstallment = async (interestAmount: number) => {
+      if (!delayModal.installmentId || !currentUser) return;
+      
+      const inst = installments.find(i => i.id === delayModal.installmentId);
+      if (!inst) return;
+
       const currentMonthKey = `${currentDate.getMonth()}-${currentDate.getFullYear()}`;
-      const updatedInstallments = installments.map(inst => {
-          if (inst.id === delayModal.installmentId) {
-              const currentDelays = inst.delayedMonths || [];
-              return {
-                  ...inst,
-                  totalAmount: inst.totalAmount + interestAmount,
-                  accumulatedInterest: (inst.accumulatedInterest || 0) + interestAmount,
-                  delayedMonths: [...currentDelays, currentMonthKey]
-              };
-          }
-          return inst;
-      });
-      setInstallments(updatedInstallments);
+      const currentDelays = inst.delayedMonths || [];
+      
+      const updatedInst = {
+          ...inst,
+          totalAmount: inst.totalAmount + interestAmount,
+          accumulatedInterest: (inst.accumulatedInterest || 0) + interestAmount,
+          delayedMonths: [...currentDelays, currentMonthKey]
+      };
+
+      await saveData('installments', updatedInst);
       setDelayModal({ isOpen: false, installmentId: null, installmentName: '' });
   };
   
-  const handlePayInstallment = (inst: InstallmentPurchase) => {
-      const updated = installments.map(i => i.id === inst.id ? { 
-          ...i, 
-          paidInstallments: Math.min(i.totalInstallments, i.paidInstallments + 1),
+  const handlePayInstallment = async (inst: InstallmentPurchase) => {
+      if (!currentUser) return;
+      const updatedInst = { 
+          ...inst, 
+          paidInstallments: Math.min(inst.totalInstallments, inst.paidInstallments + 1),
           accumulatedInterest: 0,
           lastPaymentDate: new Date().toISOString()
-      } : i);
-      setInstallments(updated);
+      };
+      
+      await saveData('installments', updatedInst);
+
       const base = inst.totalAmount / inst.totalInstallments;
       const interest = inst.accumulatedInterest || 0;
-      addTransactionRecord(`Pagamento Parcela: ${inst.description}`, base + interest, 'Parcelas', 'expense');
+      await addTransactionRecord(`Pagamento Parcela: ${inst.description}`, base + interest, 'Parcelas', 'expense');
   };
 
-  const handleAnticipateInstallment = (months: number) => {
-      if (!anticipateModal.installment) return;
+  const handleAnticipateInstallment = async (months: number) => {
+      if (!anticipateModal.installment || !currentUser) return;
       const inst = anticipateModal.installment;
+      
+      const updatedInst = {
+          ...inst,
+          paidInstallments: Math.min(inst.totalInstallments, inst.paidInstallments + months),
+          lastPaymentDate: new Date().toISOString()
+      };
+      
+      await saveData('installments', updatedInst);
+
       const baseVal = inst.totalAmount / inst.totalInstallments;
       const totalAnticipated = baseVal * months;
-      const updated = installments.map(i => i.id === inst.id ? {
-          ...i,
-          paidInstallments: Math.min(i.totalInstallments, i.paidInstallments + months),
-          lastPaymentDate: new Date().toISOString()
-      } : i);
-      setInstallments(updated);
-      addTransactionRecord(`Antecipação Parcela (${months}x): ${inst.description}`, totalAnticipated, 'Parcelas', 'expense');
+      await addTransactionRecord(`Antecipação Parcela (${months}x): ${inst.description}`, totalAnticipated, 'Parcelas', 'expense');
+      
       setAnticipateModal({ isOpen: false, installment: null });
   };
 
-  const handlePayAllInstallments = () => {
+  const handlePayAllInstallments = async () => {
+      if (!currentUser) return;
+      const batch = writeBatch(db);
+      const uid = currentUser.uid;
       let totalPaid = 0;
-      const updatedInstallments = installments.map(inst => {
+
+      installments.forEach(inst => {
           if (inst.paidInstallments < inst.totalInstallments) {
               const base = inst.totalAmount / inst.totalInstallments;
               const interest = inst.accumulatedInterest || 0;
               totalPaid += base + interest;
-              return { ...inst, paidInstallments: inst.paidInstallments + 1, accumulatedInterest: 0, lastPaymentDate: new Date().toISOString() };
+
+              const docRef = doc(db, "users", uid, "installments", inst.id);
+              batch.update(docRef, {
+                  paidInstallments: inst.paidInstallments + 1,
+                  accumulatedInterest: 0,
+                  lastPaymentDate: new Date().toISOString()
+              });
           }
-          return inst;
       });
-      setInstallments(updatedInstallments);
+
+      await batch.commit();
+      
+      if (totalPaid > 0) {
+          await addTransactionRecord('Pagamento Geral de Parcelas', totalPaid, 'Parcelas', 'expense');
+      }
       setIsPayAllModalOpen(false);
-      if (totalPaid > 0) addTransactionRecord('Pagamento Geral de Parcelas', totalPaid, 'Parcelas', 'expense');
   };
 
-  const handleAddInvestment = (inv: Omit<Investment, 'id'>) => {
-      setInvestments(prev => [...prev, { ...inv, id: generateId() }]);
-      addTransactionRecord(`Investimento: ${inv.name}`, inv.amount, 'Investimentos', 'expense');
+  const handleAddInvestment = async (inv: Omit<Investment, 'id'>) => {
+      const newInv = { ...inv, id: generateId() };
+      await saveData('investments', newInv);
+      await addTransactionRecord(`Investimento: ${inv.name}`, inv.amount, 'Investimentos', 'expense');
       setIsInvestModalOpen(false);
   };
 
@@ -599,7 +631,6 @@ function App() {
       return 'Boa noite';
   };
 
-  // Find currently selected goal object
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null;
 
   if (isAuthLoading) {
@@ -713,7 +744,7 @@ function App() {
         {/* --- MAIN CONTENT AREA WITH ANIMATION --- */}
         <div 
             key={activeTab}
-            className="p-4 lg:p-8 max-w-[1920px] mx-auto space-y-8 animate-fade-in-up duration-500"
+            className="p-4 lg:p-8 max-w-[1920px] mx-auto space-y-8 animate-fade-in-right duration-500"
         >
             
             {/* --- DASHBOARD VIEW --- */}
@@ -1214,10 +1245,10 @@ function App() {
       </main>
 
       {/* --- MODALS --- */}
-      <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={(t) => { setTransactions(prev => [...prev, { ...t, id: generateId() }]); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={(i) => { setInstallments(prev => [...prev, { ...i, id: generateId() }]); setIsInstModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={(g) => { setGoals(prev => [...prev, { ...g, id: generateId() }]); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => setIsSubModalOpen(false)} onSave={(s) => { setSubscriptions(prev => [...prev, { ...s, id: generateId() }]); setIsSubModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={async (t) => { const newT = { ...t, id: generateId() }; await saveData('transactions', newT); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={async (i) => { const newI = { ...i, id: generateId() }; await saveData('installments', newI); setIsInstModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => setIsSubModalOpen(false)} onSave={async (s) => { const newS = { ...s, id: generateId() }; await saveData('subscriptions', newS); setIsSubModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={handleAddInvestment} themeColor={currentTheme} isDarkMode={isDarkMode} />
       
       {/* New Goal Details Modal */}
@@ -1227,7 +1258,7 @@ function App() {
         goal={selectedGoal}
         transactions={goalTransactions}
         onUpdateBalance={handleUpdateGoalBalance}
-        onDeleteTransaction={(id) => setGoalTransactions(prev => prev.filter(t => t.id !== id))}
+        onDeleteTransaction={(id) => deleteData('goal_transactions', id)}
         themeColor={currentTheme}
         isDarkMode={isDarkMode}
       />
