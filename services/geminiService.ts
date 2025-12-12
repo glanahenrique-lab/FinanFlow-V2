@@ -1,9 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getFinancialAdvice = async (
   transactions: Transaction[],
@@ -12,10 +10,7 @@ export const getFinancialAdvice = async (
   subscriptions: Subscription[],
   investments: Investment[]
 ): Promise<string> => {
-  if (!apiKey) {
-    return "API Key não configurada. Por favor, configure a chave da API do Google Gemini.";
-  }
-
+  
   const prompt = `
     Atue como um consultor financeiro pessoal de elite. Analise os dados fornecidos e gere um RELATÓRIO ESTRUTURADO.
     
