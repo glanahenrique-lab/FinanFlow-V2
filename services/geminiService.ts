@@ -1,7 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getFinancialAdvice = async (
   transactions: Transaction[],
@@ -11,6 +8,7 @@ export const getFinancialAdvice = async (
   investments: Investment[]
 ): Promise<string> => {
   
+  // Construímos o prompt aqui no cliente, mas enviamos para o servidor processar
   const prompt = `
     Atue como um consultor financeiro pessoal de elite. Analise os dados fornecidos e gere um RELATÓRIO ESTRUTURADO.
     
@@ -46,13 +44,24 @@ export const getFinancialAdvice = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+    // Agora chamamos nossa própria API na Vercel, que é segura
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
     });
-    return response.text || "Não foi possível gerar uma análise no momento.";
+
+    if (!response.ok) {
+      throw new Error(`Erro na requisição: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.text || "Não foi possível gerar uma análise no momento.";
+
   } catch (error) {
-    console.error("Erro ao chamar Gemini API:", error);
-    return "Ocorreu um erro ao tentar analisar seus dados. Tente novamente mais tarde.";
+    console.error("Erro ao obter conselho financeiro:", error);
+    return "Ocorreu um erro ao tentar conectar com o consultor inteligente. Tente novamente mais tarde.";
   }
 };
