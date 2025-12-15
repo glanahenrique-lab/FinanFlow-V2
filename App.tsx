@@ -67,7 +67,7 @@ import { AddInvestmentModal } from './components/AddInvestmentModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { FinancialReportModal } from './components/FinancialReportModal';
 import { GoalDetailsModal } from './components/GoalDetailsModal';
-import { ThemeSelectionModal, ThemeColor } from './components/ThemeSelectionModal';
+import { ThemeColor } from './components/ThemeSelectionModal'; // Importado para manter tipo, embora o modal seja integrado
 import { ProfileModal } from './components/ProfileModal';
 import { DelayInstallmentModal } from './components/DelayInstallmentModal';
 import { PayAllModal } from './components/PayAllModal';
@@ -142,14 +142,46 @@ const themes: Record<ThemeColor, {
     slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200' },
 };
 
+// --- Category Colors Helper ---
+const getCategoryStyle = (category: string) => {
+    // Normalização básica para evitar problemas com case
+    const cat = category || 'Outros';
+    
+    // Mapeamento de cores (bg, text, border)
+    // Usando tons que funcionam bem tanto no light quanto no dark mode
+    const styles: Record<string, string> = {
+        // Ganhos
+        'Salário': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        'Investimento': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
+        'Renda Extra': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
+        
+        // Gastos Essenciais
+        'Alimentação': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+        'Moradia': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+        'Saúde': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+        'Transporte': 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
+        'Educação': 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+        
+        // Estilo de Vida
+        'Lazer': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
+        'Serviços': 'bg-amber-500/10 text-amber-500 border-amber-500/20', // Assinaturas, internet etc
+        'Compras': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+        
+        // Outros
+        'Outros': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
+    };
+
+    return styles[cat] || styles['Outros'];
+};
+
 const getInvestmentStyle = (type: string) => {
     switch (type) {
-        case 'Renda Fixa (CDB, Tesouro)': return { icon: Landmark, color: 'text-yellow-400', bg: 'bg-yellow-500/10' };
-        case 'Ações (Bolsa)': return { icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10' };
-        case 'FIIs (Fundos Imobiliários)': return { icon: Building2, color: 'text-orange-400', bg: 'bg-orange-500/10' };
-        case 'Criptomoedas': return { icon: Banknote, color: 'text-purple-400', bg: 'bg-purple-500/10' };
-        case 'Reserva de Emergência': return { icon: ShieldAlert, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-        default: return { icon: Gem, color: 'text-slate-400', bg: 'bg-slate-500/10' };
+        case 'Renda Fixa (CDB, Tesouro)': return { icon: Landmark, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' };
+        case 'Ações (Bolsa)': return { icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', badge: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
+        case 'FIIs (Fundos Imobiliários)': return { icon: Building2, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', badge: 'bg-orange-500/10 text-orange-500 border-orange-500/20' };
+        case 'Criptomoedas': return { icon: Banknote, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
+        case 'Reserva de Emergência': return { icon: ShieldAlert, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+        default: return { icon: Gem, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20', badge: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
     }
 };
 
@@ -159,7 +191,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
   
-  // -- STATES DE PREFERÊNCIA (Com fallback para LocalStorage) --
+  // -- STATES DE PREFERÊNCIA --
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -177,7 +209,6 @@ function App() {
   // Flag para evitar sobrescrita inicial errada
   const isInitialLoad = useRef(true);
 
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // User Profile State
@@ -202,6 +233,7 @@ function App() {
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   
   // Edit State
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -247,7 +279,7 @@ function App() {
                 setUserName(userData.name || user.displayName || 'Investidor');
                 setUserPhoto(userData.photo || null);
                 
-                // Sync Preferences from Firestore - Critical Fix for Persistence
+                // Sync Preferences
                 if (userData.preferences) {
                     if (userData.preferences.theme) {
                         setCurrentTheme(userData.preferences.theme);
@@ -264,7 +296,6 @@ function App() {
                 }
             } else {
                 setUserName(user.displayName || 'Investidor');
-                // Save defaults if first time
                 await setDoc(userDocRef, {
                     uid: user.uid,
                     name: user.displayName || 'Investidor',
@@ -279,7 +310,6 @@ function App() {
         } catch (error) {
             console.error("Erro ao buscar perfil:", error);
         } finally {
-            // Unblock saving preferences after initial load is done
             setTimeout(() => { isInitialLoad.current = false; }, 1000);
         }
         
@@ -287,7 +317,6 @@ function App() {
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
-        // Reset defaults on logout
         setTransactions([]);
         setInstallments([]);
         setGoals([]);
@@ -304,12 +333,10 @@ function App() {
 
   // --- SAVE PREFERENCES TO FIRESTORE ---
   useEffect(() => {
-      // LocalStorage Sync
       localStorage.setItem('appTheme', currentTheme);
       localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
       localStorage.setItem('finanflow_privacy_mode', JSON.stringify(isPrivacyMode));
 
-      // Firestore Sync
       if (currentUser && !isInitialLoad.current) {
           const updatePrefs = async () => {
               try {
@@ -384,7 +411,12 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    setIsLogoutConfirmOpen(false);
     await signOut(auth);
   };
 
@@ -866,26 +898,23 @@ function App() {
   return (
     <div className={`min-h-screen ${theme.selection} ${baseTheme.text} font-sans pb-24 lg:pb-0 transition-colors duration-300 relative`}>
       
-      {/* --- DYNAMIC AMBIENT BACKGROUND --- */}
+      {/* --- BACKGROUND PATTERN (Checkered Grid from Login) --- */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-          {/* Base Layer */}
+          {/* Base Color */}
           <div className={`absolute inset-0 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`} />
           
-          {/* Gradient Overlay (Spotlight effect) */}
-          <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] ${isDarkMode ? 'from-slate-900 via-slate-950 to-black' : 'from-white via-slate-50 to-slate-100'} opacity-80`} />
+          {/* Grid Pattern */}
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+          <div className={`absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] ${isDarkMode ? 'opacity-20' : 'opacity-40'}`} />
           
           {/* Dynamic Theme Orbs */}
           <div className={`absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-15 transition-all duration-1000 ease-in-out ${theme.primary}`} />
           <div className={`absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[100px] opacity-10 transition-all duration-1000 ease-in-out ${theme.primary}`} />
-          
-          {/* Texture & Grid */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
-          <div className={`absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] ${isDarkMode ? 'opacity-20' : 'opacity-30'}`} />
       </div>
 
       {/* Sidebar Mobile/Desktop */}
-      <nav className={`fixed bottom-0 lg:left-0 w-full lg:w-20 lg:h-screen ${baseTheme.nav} border-t lg:border-t-0 lg:border-r ${baseTheme.navBorder} z-50 flex lg:flex-col items-center justify-around lg:justify-start lg:pt-8 gap-1 lg:gap-6 shadow-xl transition-colors duration-300`}>
-        <div className="hidden lg:flex items-center justify-center w-12 h-12 mb-4 bg-gradient-to-br from-lime-400 to-emerald-600 rounded-xl shadow-lg shadow-lime-500/20">
+      <nav className={`fixed bottom-0 lg:left-0 w-full lg:w-20 lg:h-screen ${baseTheme.nav} border-t lg:border-t-0 lg:border-r ${baseTheme.navBorder} z-50 flex lg:flex-col items-center justify-around lg:justify-start lg:pt-8 gap-1 lg:gap-4 shadow-xl transition-colors duration-300 lg:overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
+        <div className="hidden lg:flex items-center justify-center w-12 h-12 mb-4 bg-gradient-to-br from-lime-400 to-emerald-600 rounded-xl shadow-lg shadow-lime-500/20 shrink-0">
           <Sparkles className="text-black" size={24} />
         </div>
         {[
@@ -896,27 +925,50 @@ function App() {
           { id: 'goals', icon: PiggyBank, label: 'Metas' },
           { id: 'investments', icon: TrendingUp, label: 'Invest' },
           { id: 'updates', icon: Bell, label: 'Novidades' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id as any)}
-            className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 ${activeTab === item.id ? `${theme.primary} text-black shadow-lg` : `${baseTheme.textMuted} hover:bg-slate-200/50 dark:hover:bg-slate-800`}`}
-          >
-            <item.icon size={22} />
-            <span className="text-[9px] font-medium lg:hidden">{item.label}</span>
-            {activeTab === item.id && (
-                <span className={`absolute lg:left-full lg:top-1/2 lg:-translate-y-1/2 lg:ml-4 lg:mb-0 -top-8 mb-2 px-2 py-1 ${isDarkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-800 shadow-md'} text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50`}>
-                    {item.label}
-                </span>
-            )}
-          </button>
-        ))}
-        
-        <div className="hidden lg:flex flex-col gap-4 mt-auto mb-8">
-            <button onClick={() => setIsThemeModalOpen(true)} className={`p-3 ${baseTheme.textMuted} hover:${baseTheme.textHead} hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors`} title="Temas">
-                <Palette size={22} />
+        ].map((item) => {
+          const isActive = activeTab === item.id;
+          const isDash = item.id === 'dashboard';
+          
+          let activeStyle = '';
+          
+          if (isActive) {
+               // Active State (Selected)
+               activeStyle = isDash 
+                  ? 'bg-lime-400 text-slate-900 shadow-[0_0_15px_rgba(163,230,53,0.4)] scale-105 z-10' 
+                  : `${theme.primary} text-black shadow-lg scale-105`;
+          } else {
+               // Inactive State (Unselected)
+               if (isDash) {
+                   // "Home" marker style (Soft Lime)
+                   activeStyle = isDarkMode 
+                      ? 'text-lime-400 bg-lime-500/10 hover:bg-lime-500/20' 
+                      : 'text-lime-600 bg-lime-100/80 hover:bg-lime-200/80';
+               } else {
+                   // Standard inactive
+                   activeStyle = `${baseTheme.textMuted} hover:bg-slate-200/50 dark:hover:bg-slate-800`;
+               }
+          }
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as any)}
+              className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 shrink-0 ${activeStyle}`}
+            >
+              <item.icon size={22} />
+              <span className="text-[9px] font-medium lg:hidden">{item.label}</span>
+              {isActive && (
+                  <span className={`absolute lg:left-full lg:top-1/2 lg:-translate-y-1/2 lg:ml-4 lg:mb-0 -top-8 mb-2 px-2 py-1 ${isDarkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-800 shadow-md'} text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50`}>
+                      {item.label}
+                  </span>
+              )}
             </button>
-            <button onClick={handleLogout} className={`p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors`} title="Sair">
+          );
+        })}
+        
+        <div className="hidden lg:flex flex-col gap-4 mt-auto mb-8 shrink-0">
+            {/* Theme button moved to Profile Modal */}
+            <button onClick={handleLogoutClick} className={`p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors`} title="Sair">
                 <LogOut size={22} />
             </button>
         </div>
@@ -967,10 +1019,10 @@ function App() {
                   {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
                </button>
 
-               <button onClick={handleLogout} className="lg:hidden p-2 text-slate-500"><LogOut size={20} /></button>
+               <button onClick={handleLogoutClick} className="lg:hidden p-2 text-slate-500"><LogOut size={20} /></button>
                {activeTab === 'dashboard' && (
                <>
-                <button onClick={() => setIsThemeModalOpen(true)} className={`lg:hidden p-2 ${baseTheme.textMuted}`}><Palette size={20} /></button>
+                {/* Mobile Theme Button removed (moved to profile) */}
                 <div className={`h-6 w-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-300'} mx-1 hidden sm:block`}></div>
                 <button 
                     onClick={() => setIsTransModalOpen(true)}
@@ -1156,12 +1208,17 @@ function App() {
                                                 </div>
                                                 <div>
                                                     <p className={`font-medium ${baseTheme.text} text-sm`}>{t.description}</p>
-                                                    <p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})} • {t.category}</p>
+                                                    <p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}</p>
                                                 </div>
                                             </div>
-                                            <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
-                                                {getDisplayValue(t.amount)}
-                                            </span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
+                                                    {getDisplayValue(t.amount)}
+                                                </span>
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded ${getCategoryStyle(t.category)} bg-opacity-50`}>
+                                                    {t.category}
+                                                </span>
+                                            </div>
                                         </div>
                                     ))
                                 )}
@@ -1260,7 +1317,7 @@ function App() {
                                                 <td className={`p-4 ${baseTheme.textMuted} font-mono text-sm`}>{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                                                 <td className={`p-4 font-medium ${baseTheme.textHead}`}>{t.description}</td>
                                                 <td className="p-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium border ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : `${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-200 text-slate-600 border-slate-300'}`}`}>
+                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getCategoryStyle(t.category)}`}>
                                                         {t.category}
                                                     </span>
                                                 </td>
@@ -1470,7 +1527,10 @@ function App() {
                                             </div>
                                             <div>
                                                 <h4 className={`font-bold ${baseTheme.textHead}`}>{inv.name}</h4>
-                                                <p className={`text-xs ${baseTheme.textMuted}`}>{inv.type} • {new Date(inv.date).toLocaleDateString()}</p>
+                                                <p className={`text-xs ${baseTheme.textMuted} mb-1.5`}>{new Date(inv.date).toLocaleDateString()}</p>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${style.badge}`}>
+                                                    {inv.type}
+                                                </span>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -1523,7 +1583,12 @@ function App() {
                                         </div>
                                         <div>
                                             <h4 className={`font-bold ${baseTheme.textHead}`}>{sub.name}</h4>
-                                            <p className={`text-xs ${baseTheme.textMuted}`}>Dia {sub.paymentDay} • {sub.category}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getCategoryStyle(sub.category)}`}>
+                                                    {sub.category}
+                                                </span>
+                                                <span className={`text-xs ${baseTheme.textMuted}`}>• Dia {sub.paymentDay}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <p className={`font-bold ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(sub.amount)}</p>
@@ -1645,15 +1710,8 @@ function App() {
 
       <FinancialReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} aiAnalysis={aiAnalysis} isAnalyzing={isAnalyzing} chartData={pieChartData} totalIncome={totalMonthlyIncome} totalExpense={totalMonthlyExpense} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false })} isDarkMode={isDarkMode} />
-      <ThemeSelectionModal 
-        isOpen={isThemeModalOpen} 
-        onClose={() => setIsThemeModalOpen(false)} 
-        currentTheme={currentTheme} 
-        onSelectTheme={setCurrentTheme} 
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
-      />
       
+      {/* Profile Modal with Integrated Theme Selection */}
       <ProfileModal 
         isOpen={isProfileModalOpen} 
         onClose={() => setIsProfileModalOpen(false)} 
@@ -1662,9 +1720,14 @@ function App() {
         onSave={handleProfileUpdate} 
         onDeleteAccount={handleDeleteAccount}
         themeColor={currentTheme} 
+        currentTheme={currentTheme}
+        onSelectTheme={setCurrentTheme}
+        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
         isDarkMode={isDarkMode} 
       />
       
+      <ConfirmModal isOpen={isLogoutConfirmOpen} title="Sair da Conta" message="Você tem certeza que deseja sair do aplicativo?" onConfirm={confirmLogout} onCancel={() => setIsLogoutConfirmOpen(false)} isDarkMode={isDarkMode} />
+
       <DelayInstallmentModal isOpen={delayModal.isOpen} onClose={() => setDelayModal({ ...delayModal, isOpen: false })} onConfirm={handleDelayInstallment} installmentName={delayModal.installmentName} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <PayAllModal isOpen={isPayAllModalOpen} onClose={() => setIsPayAllModalOpen(false)} onConfirm={handlePayAllInstallments} installments={installments} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AnticipateModal isOpen={anticipateModal.isOpen} onClose={() => setAnticipateModal({ isOpen: false, installment: null })} onConfirm={handleAnticipateInstallment} installment={anticipateModal.installment} themeColor={currentTheme} isDarkMode={isDarkMode} />
