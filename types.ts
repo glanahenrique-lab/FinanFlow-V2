@@ -46,20 +46,30 @@ export interface GoalTransaction {
   type: 'deposit' | 'withdraw';
 }
 
-export interface Subscription {
-  id: string;
-  name: string;
-  amount: number;
-  paymentDay: number; // 1-31
-  category: string;
-}
-
 export interface Investment {
   id: string;
   name: string;
   amount: number;
   date: string; // ISO string
   type: string; // 'Renda Fixa', 'Ações', 'FIIs', 'Cripto', etc.
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  investmentId: string;
+  amount: number;
+  date: string; // ISO string
+  type: 'buy' | 'sell'; // buy = aporte (entrada no inv), sell = resgate (saída do inv)
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  paymentDay: number; // 1-31
+  category: string;
+  createdAt?: string; // ISO String - Data de criação/início da vigência
+  archivedAt?: string | null; // ISO String - Data de cancelamento/edição (fim da vigência)
 }
 
 export interface FinancialSummary {

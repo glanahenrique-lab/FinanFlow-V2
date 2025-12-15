@@ -12,6 +12,7 @@ interface FinancialReportModalProps {
   totalExpense: number;
   themeColor: string;
   isDarkMode: boolean;
+  isPrivacyMode?: boolean;
 }
 
 const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#14b8a6', '#3b82f6'];
@@ -25,7 +26,8 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
   totalIncome,
   totalExpense,
   themeColor,
-  isDarkMode
+  isDarkMode,
+  isPrivacyMode = false
 }) => {
   if (!isOpen) return null;
 
@@ -33,6 +35,11 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
     { name: 'Receitas', amount: totalIncome },
     { name: 'Despesas', amount: totalExpense },
   ];
+
+  const formatValue = (val: number) => {
+      if (isPrivacyMode) return '••••';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  };
 
   const styles = isDarkMode ? {
     bg: 'bg-slate-900',
@@ -95,7 +102,7 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
     };
 
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>
             {sections.map((section, index) => {
                 if (!section.trim()) return null;
                 // Tenta extrair um título da primeira linha
@@ -166,7 +173,7 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
                                         ))}
                                     </Pie>
                                     <Tooltip 
-                                        formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                                        formatter={(value: number) => formatValue(value)}
                                         contentStyle={{ backgroundColor: styles.chartTooltipBg, borderColor: styles.chartTooltipBorder, borderRadius: '8px', color: styles.chartText }}
                                         itemStyle={{ color: styles.chartText }}
                                     />
@@ -181,8 +188,8 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
                                 <div key={index} className={`flex items-center gap-2 text-xs ${styles.textMuted}`}>
                                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                                     <span className="truncate flex-1">{entry.name}</span>
-                                    <span className={`font-bold ${styles.textHead}`}>
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.value)}
+                                    <span className={`font-bold ${styles.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>
+                                        {formatValue(entry.value)}
                                     </span>
                                 </div>
                             ))}
@@ -200,7 +207,7 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
                                     <YAxis dataKey="name" type="category" width={80} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b'}} />
                                     <Tooltip 
                                         cursor={{fill: 'transparent'}}
-                                        formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                                        formatter={(value: number) => formatValue(value)}
                                         contentStyle={{ backgroundColor: styles.chartTooltipBg, borderColor: styles.chartTooltipBorder, borderRadius: '8px', color: styles.chartText }}
                                         itemStyle={{ color: styles.chartText }}
                                     />

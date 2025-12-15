@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Subscription } from '../types';
 
@@ -6,15 +6,32 @@ interface AddSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (subscription: Omit<Subscription, 'id'>) => void;
+  initialData?: Subscription | null;
   themeColor: string;
   isDarkMode: boolean;
 }
 
-export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOpen, onClose, onSave, themeColor, isDarkMode }) => {
+export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOpen, onClose, onSave, initialData, themeColor, isDarkMode }) => {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentDay, setPaymentDay] = useState('');
   const [category, setCategory] = useState('Serviços');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setName(initialData.name);
+        setAmount(initialData.amount.toString());
+        setPaymentDay(initialData.paymentDay.toString());
+        setCategory(initialData.category);
+      } else {
+        setName('');
+        setAmount('');
+        setPaymentDay('');
+        setCategory('Serviços');
+      }
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -26,9 +43,8 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
       paymentDay: Number(paymentDay),
       category,
     });
-    setName('');
-    setAmount('');
-    setPaymentDay('');
+    // Não limpamos aqui imediatamente para evitar flickers visuais antes de fechar, 
+    // o useEffect cuida do reset ao reabrir.
     onClose();
   };
 
@@ -56,7 +72,9 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl transition-colors duration-300`}>
         <div className={`flex justify-between items-center p-6 border-b ${styles.border}`}>
-          <h2 className={`text-xl font-bold ${styles.textHead}`}>Nova Assinatura Mensal</h2>
+          <h2 className={`text-xl font-bold ${styles.textHead}`}>
+            {initialData ? 'Editar Assinatura' : 'Nova Assinatura'}
+          </h2>
           <button onClick={onClose} className={`text-slate-400 ${styles.closeHover} transition-colors`}>
             <X size={24} />
           </button>
@@ -123,7 +141,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
             type="submit"
             className={`w-full mt-4 bg-${themeColor}-600 hover:bg-${themeColor}-500 text-white font-semibold py-3 rounded-lg transition-colors shadow-lg shadow-${themeColor}-900/20`}
           >
-            Salvar Assinatura
+            {initialData ? 'Salvar Alterações' : 'Criar Assinatura'}
           </button>
         </form>
       </div>

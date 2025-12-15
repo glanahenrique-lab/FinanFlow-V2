@@ -34,7 +34,10 @@ import {
   Building2,
   Gem,
   Bell,
-  LogOut
+  LogOut,
+  Check,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   PieChart,
@@ -52,7 +55,7 @@ import { onAuthStateChanged, signOut, updateProfile, deleteUser, User as Firebas
 import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from './services/firebase';
 import { AuthPage } from './components/AuthPage';
-import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment, GoalTransaction, UserProfile } from './types';
+import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment, GoalTransaction, InvestmentTransaction, UserProfile } from './types';
 import { SummaryCard, SummaryVariant } from './components/SummaryCard';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { AddInstallmentModal } from './components/AddInstallmentModal';
@@ -67,6 +70,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { DelayInstallmentModal } from './components/DelayInstallmentModal';
 import { PayAllModal } from './components/PayAllModal';
 import { AnticipateModal } from './components/AnticipateModal';
+import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { getFinancialAdvice } from './services/geminiService';
 
 const formatCurrency = (value: number) => {
@@ -133,6 +137,13 @@ function App() {
     const savedMode = localStorage.getItem('isDarkMode');
     return savedMode !== null ? JSON.parse(savedMode) : true;
   });
+  
+  // Privacy Mode State
+  const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
+    const savedMode = localStorage.getItem('isPrivacyMode');
+    return savedMode !== null ? JSON.parse(savedMode) : false;
+  });
+
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -148,6 +159,7 @@ function App() {
   const [goalTransactions, setGoalTransactions] = useState<GoalTransaction[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [investmentTransactions, setInvestmentTransactions] = useState<InvestmentTransaction[]>([]);
 
   // Modal States
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
@@ -158,6 +170,9 @@ function App() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false);
   
+  // Edit State
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+
   // Installment Modals
   const [delayModal, setDelayModal] = useState<{ isOpen: boolean; installmentId: string | null; installmentName: string; }>({
     isOpen: false, installmentId: null, installmentName: ''
@@ -166,8 +181,9 @@ function App() {
     isOpen: false, installment: null
   });
   
-  // New State for Goal Details Modal (replaces balanceModal)
+  // Detail Modals
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [selectedInvestmentId, setSelectedInvestmentId] = useState<string | null>(null);
 
   const [confirmState, setConfirmState] = useState<{ isOpen: boolean; type: string | null; id: string | null; title: string; message: string; }>({
     isOpen: false, type: null, id: null, title: '', message: ''
@@ -216,6 +232,7 @@ function App() {
         setGoalTransactions([]);
         setSubscriptions([]);
         setInvestments([]);
+        setInvestmentTransactions([]);
       }
       setIsAuthLoading(false);
     });
@@ -246,6 +263,9 @@ function App() {
     const unsubInvest = onSnapshot(collection(db, "users", uid, "investments"), (snap) => {
       setInvestments(snap.docs.map(d => d.data() as Investment));
     });
+    const unsubInvestTrans = onSnapshot(collection(db, "users", uid, "investment_transactions"), (snap) => {
+      setInvestmentTransactions(snap.docs.map(d => d.data() as InvestmentTransaction));
+    });
 
     return () => {
       unsubTrans();
@@ -254,6 +274,7 @@ function App() {
       unsubGoalTrans();
       unsubSubs();
       unsubInvest();
+      unsubInvestTrans();
     };
   }, [currentUser]);
 
@@ -316,6 +337,12 @@ function App() {
   // Local Preferences Persistence
   useEffect(() => { localStorage.setItem('appTheme', currentTheme); }, [currentTheme]);
   useEffect(() => { localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode)); }, [isDarkMode]);
+  useEffect(() => { localStorage.setItem('isPrivacyMode', JSON.stringify(isPrivacyMode)); }, [isPrivacyMode]);
+
+  // Helper to check privacy mode for display strings
+  const getDisplayValue = (val: number, formatter = formatCurrency) => {
+      return isPrivacyMode ? '••••••' : formatter(val);
+  };
 
   // Dynamic Theme Base Styles
   const baseTheme = isDarkMode ? {
@@ -405,9 +432,20 @@ function App() {
   });
 
   const currentMonthInvestments = investments.filter(i => {
-    const iDate = new Date(i.date);
-    return iDate.getMonth() === currentDate.getMonth() && iDate.getFullYear() === currentDate.getFullYear();
+    // Para fluxo de caixa, consideramos apenas quando foi criado ou se houve "buy" no mês
+    // Porém, a estrutura atual de Investment é um ativo. 
+    // Vamos considerar o histórico 'investmentTransactions' para o fluxo.
+    return false; // Deprecated logic. We use investmentTransactions now.
   });
+  
+  // Calculate cash flow from investment transactions for current month
+  const currentMonthInvTrans = investmentTransactions.filter(it => {
+      const itDate = new Date(it.date);
+      return itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
+  });
+
+  const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc, it) => acc + it.amount, 0);
+  const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc, it) => acc + it.amount, 0);
 
   const currentMonthGoalDeposits = goalTransactions.filter(gt => {
     const gtDate = new Date(gt.date);
@@ -420,10 +458,26 @@ function App() {
       return gt.type === 'withdraw' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
   }).reduce((acc, t) => acc + t.amount, 0);
   
-  const totalMonthlyIncome = totalVariableIncome + totalGoalWithdrawalsVal;
+  const totalMonthlyIncome = totalVariableIncome + totalGoalWithdrawalsVal + totalInvSells;
 
   const totalVariableExpense = currentMonthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-  const totalFixedExpense = subscriptions.reduce((acc, s) => acc + s.amount, 0);
+  
+  // --- SUBSCRIPTION CALCULATION ---
+  // Filter subscriptions valid for the current month view
+  const currentMonthSubscriptions = subscriptions.filter(sub => {
+      // Default to far past if createdAt is missing (legacy support)
+      const subStart = new Date(sub.createdAt || '2000-01-01');
+      const subEnd = sub.archivedAt ? new Date(sub.archivedAt) : null;
+      
+      const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      // It is active if started before month end AND (not ended OR ended after month start)
+      // "End after month start" means it was active at least 1 day in this month
+      return subStart <= monthEnd && (!subEnd || subEnd >= monthStart);
+  });
+
+  const totalFixedExpense = currentMonthSubscriptions.reduce((acc, s) => acc + s.amount, 0);
   
   // Calculate Installments for Selected Month
   const currentMonthInstallments = installments.map(inst => {
@@ -442,7 +496,8 @@ function App() {
     return acc + baseAmount + (i.accumulatedInterest || 0);
   }, 0);
 
-  const totalInvestmentsVal = currentMonthInvestments.reduce((acc, i) => acc + i.amount, 0);
+  // We use the transactions now, not the asset date
+  const totalInvestmentsVal = totalInvBuys;
   const totalGoalDepositsVal = currentMonthGoalDeposits.reduce((acc, i) => acc + i.amount, 0);
 
   const totalMonthlyExpense = totalVariableExpense + totalFixedExpense + totalInstallmentsCost + totalInvestmentsVal + totalGoalDepositsVal;
@@ -451,9 +506,9 @@ function App() {
   // Chart Data
   const categories = [...new Set([
     ...currentMonthTransactions.filter(t => t.type === 'expense').map(t => t.category),
-    ...subscriptions.map(s => s.category),
+    ...currentMonthSubscriptions.map(s => s.category),
     currentMonthInstallments.length > 0 ? 'Parcelas' : '',
-    investments.length > 0 ? 'Investimentos' : '',
+    totalInvestmentsVal > 0 ? 'Investimentos' : '',
     currentMonthGoalDeposits.length > 0 ? 'Metas' : ''
   ])].filter(Boolean);
 
@@ -464,7 +519,7 @@ function App() {
     else if (cat === 'Metas') value = totalGoalDepositsVal;
     else {
       value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, t) => acc + t.amount, 0);
-      value += subscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + s.amount, 0);
+      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + s.amount, 0);
     }
     return { name: cat, value };
   }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
@@ -486,8 +541,18 @@ function App() {
     if (type === 'Movimentação') await deleteData('transactions', id);
     if (type === 'Parcelamento') await deleteData('installments', id);
     if (type === 'Meta') await deleteData('goals', id);
-    if (type === 'Assinatura') await deleteData('subscriptions', id);
     if (type === 'Investimento') await deleteData('investments', id);
+    
+    // Para Assinaturas, fazemos um "Soft Delete" (Arquivamento) para manter histórico
+    if (type === 'Assinatura') {
+        const sub = subscriptions.find(s => s.id === id);
+        if (sub) {
+            await saveData('subscriptions', { 
+                ...sub, 
+                archivedAt: new Date().toISOString() 
+            });
+        }
+    }
     
     setConfirmState({ isOpen: false, type: null, id: null, title: '', message: '' });
   };
@@ -518,6 +583,35 @@ function App() {
         amount,
         'Metas',
         type === 'add' ? 'expense' : 'income'
+    );
+  };
+
+  const handleUpdateInvestmentBalance = async (amount: number, type: 'buy' | 'sell') => {
+    if (!selectedInvestmentId || !currentUser) return;
+    
+    const invest = investments.find(i => i.id === selectedInvestmentId);
+    if (!invest) return;
+
+    // 1. Update Investment Total
+    const newAmount = type === 'buy' ? invest.amount + amount : Math.max(0, invest.amount - amount);
+    await saveData('investments', { ...invest, amount: newAmount });
+    
+    // 2. Add Investment Transaction History
+    const invTransId = generateId();
+    await saveData('investment_transactions', { 
+        id: invTransId, 
+        investmentId: selectedInvestmentId, 
+        amount, 
+        date: new Date().toISOString(), 
+        type: type 
+    });
+    
+    // 3. Add General Transaction (Cash Flow)
+    await addTransactionRecord(
+        `${type === 'buy' ? 'Aporte Investimento' : 'Resgate Investimento'}: ${invest.name}`,
+        amount,
+        'Investimentos',
+        type === 'buy' ? 'expense' : 'income'
     );
   };
 
@@ -617,8 +711,53 @@ function App() {
   const handleAddInvestment = async (inv: Omit<Investment, 'id'>) => {
       const newInv = { ...inv, id: generateId() };
       await saveData('investments', newInv);
-      await addTransactionRecord(`Investimento: ${inv.name}`, inv.amount, 'Investimentos', 'expense');
+      // Log as expense only on creation if amount > 0
+      if (inv.amount > 0) {
+          await addTransactionRecord(`Investimento Inicial: ${inv.name}`, inv.amount, 'Investimentos', 'expense');
+          const invTransId = generateId();
+          await saveData('investment_transactions', { 
+              id: invTransId, 
+              investmentId: newInv.id, 
+              amount: inv.amount, 
+              date: newInv.date, 
+              type: 'buy' 
+          });
+      }
       setIsInvestModalOpen(false);
+  };
+
+  // Subscription Logic
+  const handleSaveSubscription = async (s: Omit<Subscription, 'id'>) => {
+      const now = new Date().toISOString();
+
+      if (editingSubscription) {
+          // Versioning: Archive the old one, create a new one
+          // 1. Archive Old
+          await saveData('subscriptions', { 
+              ...editingSubscription, 
+              archivedAt: now 
+          });
+          
+          // 2. Create New (starts now)
+          const newS = { 
+              ...s, 
+              id: generateId(),
+              createdAt: now,
+              archivedAt: null
+          };
+          await saveData('subscriptions', newS);
+          setEditingSubscription(null);
+      } else {
+          // New Subscription
+          const newS = { 
+              ...s, 
+              id: generateId(),
+              createdAt: now,
+              archivedAt: null
+          };
+          await saveData('subscriptions', newS);
+      }
+      setIsSubModalOpen(false);
   };
 
   const theme = themes[currentTheme];
@@ -632,6 +771,7 @@ function App() {
   };
 
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null;
+  const selectedInvestment = investments.find(i => i.id === selectedInvestmentId) || null;
 
   if (isAuthLoading) {
       return (
@@ -724,6 +864,14 @@ function App() {
            </div>
 
            <div className="flex items-center gap-3">
+               <button 
+                  onClick={() => setIsPrivacyMode(!isPrivacyMode)} 
+                  className={`p-2 rounded-xl transition-all ${isPrivacyMode ? 'bg-slate-800 text-slate-300' : 'text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800'}`}
+                  title={isPrivacyMode ? "Mostrar valores" : "Ocultar valores"}
+               >
+                  {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
+               </button>
+
                <button onClick={handleLogout} className="lg:hidden p-2 text-slate-500"><LogOut size={20} /></button>
                {activeTab === 'dashboard' && (
                <>
@@ -762,6 +910,7 @@ function App() {
                                 variant="income"
                                 formatter={formatCurrency}
                                 isDarkMode={isDarkMode}
+                                isPrivacyMode={isPrivacyMode}
                             />
                             <SummaryCard 
                                 title="Despesas" 
@@ -770,11 +919,14 @@ function App() {
                                 variant="expense"
                                 formatter={formatCurrency}
                                 isDarkMode={isDarkMode}
+                                isPrivacyMode={isPrivacyMode}
                                 details={
                                     <div className="space-y-1">
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Fixas</span><span>{formatCurrency(totalFixedExpense)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Parcelas</span><span>{formatCurrency(totalInstallmentsCost)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Invest</span><span>{formatCurrency(totalInvestmentsVal)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Variáveis</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalVariableExpense)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Fixas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalFixedExpense)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Parcelas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalInstallmentsCost)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Invest</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalInvestmentsVal)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Metas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalGoalDepositsVal)}</span></div>
                                     </div>
                                 }
                             />
@@ -785,6 +937,7 @@ function App() {
                                 variant={balance < 0 ? 'alert' : 'balance'} 
                                 formatter={formatCurrency}
                                 isDarkMode={isDarkMode}
+                                isPrivacyMode={isPrivacyMode}
                             />
                             <SummaryCard 
                                 title="Previsão Gastos" 
@@ -793,6 +946,7 @@ function App() {
                                 variant="default" 
                                 formatter={formatCurrency}
                                 isDarkMode={isDarkMode}
+                                isPrivacyMode={isPrivacyMode}
                             />
                         </div>
 
@@ -825,7 +979,7 @@ function App() {
                                         <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#1e293b' : '#e2e8f0'} horizontal={false} />
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" width={80} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 12, fontWeight: 600}} axisLine={false} tickLine={false} />
-                                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '12px', color: isDarkMode ? '#f8fafc' : '#1e293b' }} formatter={(val: number) => formatCurrency(val)} />
+                                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '12px', color: isDarkMode ? '#f8fafc' : '#1e293b' }} formatter={(val: number) => isPrivacyMode ? '••••' : formatCurrency(val)} />
                                         <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                                             {monthlyFlowData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                                         </Bar>
@@ -851,7 +1005,7 @@ function App() {
                                             <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                                 {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'][index % 5]} stroke="transparent" />)}
                                             </Pie>
-                                            <Tooltip formatter={(val:number) => formatCurrency(val)} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '8px', color: isDarkMode ? '#f1f5f9' : '#1e293b' }} itemStyle={{ color: isDarkMode ? '#fff' : '#000' }} />
+                                            <Tooltip formatter={(val:number) => isPrivacyMode ? '••••' : formatCurrency(val)} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '8px', color: isDarkMode ? '#f1f5f9' : '#1e293b' }} itemStyle={{ color: isDarkMode ? '#fff' : '#000' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -886,8 +1040,8 @@ function App() {
                                                     <p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}</p>
                                                 </div>
                                             </div>
-                                            <span className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
-                                                {formatCurrency(t.amount)}
+                                            <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
+                                                {getDisplayValue(t.amount)}
                                             </span>
                                         </div>
                                     ))
@@ -980,8 +1134,8 @@ function App() {
                                                         {t.category}
                                                     </span>
                                                 </td>
-                                                <td className={`p-4 text-right font-bold ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
-                                                    {t.type === 'expense' && '- '}{formatCurrency(t.amount)}
+                                                <td className={`p-4 text-right font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
+                                                    {t.type === 'expense' && '- '}{getDisplayValue(t.amount)}
                                                 </td>
                                                 <td className="p-4 flex justify-center gap-2">
                                                     <button onClick={() => handleDelete(t.id, 'Movimentação')} className={`p-2 ${baseTheme.textMuted} hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors`}><Trash2 size={16} /></button>
@@ -1051,14 +1205,14 @@ function App() {
                                         <div className="flex flex-col gap-1">
                                             <div className="flex justify-between text-sm">
                                                 <span className={baseTheme.textMuted}>Parcela Atual</span>
-                                                <span className={`font-semibold ${isDelayed ? 'text-slate-500 line-through' : baseTheme.textHead}`}>
-                                                    {formatCurrency(currentInstallmentValue)}
+                                                <span className={`font-semibold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${isDelayed ? 'text-slate-500 line-through' : baseTheme.textHead}`}>
+                                                    {getDisplayValue(currentInstallmentValue)}
                                                 </span>
                                             </div>
                                             {accumulatedInterest > 0 && !isDelayed && (
                                                 <div className="flex justify-end items-center gap-1 text-xs text-rose-400 font-medium animate-pulse">
                                                     <AlertTriangle size={12} />
-                                                    Inclui {formatCurrency(accumulatedInterest)} de juros
+                                                    Inclui {getDisplayValue(accumulatedInterest)} de juros
                                                 </div>
                                             )}
                                         </div>
@@ -1068,7 +1222,7 @@ function App() {
                                         </div>
                                         <div className={`flex justify-between text-xs ${baseTheme.textMuted} font-mono`}>
                                             <span>{inst.paidInstallments}/{inst.totalInstallments} Pagas</span>
-                                            <span>Total: {formatCurrency(inst.totalAmount)}</span>
+                                            <span className={isPrivacyMode ? 'blur-sm select-none' : ''}>Total: {getDisplayValue(inst.totalAmount)}</span>
                                         </div>
                                         
                                         {!isFinished && (
@@ -1137,18 +1291,18 @@ function App() {
                                     <div className={`flex justify-between items-center mb-4 ${isDarkMode ? 'bg-slate-950/50' : 'bg-slate-50'} p-3 rounded-xl border ${baseTheme.border}`}>
                                         <div>
                                             <p className={`text-[10px] ${baseTheme.textMuted} uppercase tracking-wider font-bold`}>Alvo</p>
-                                            <p className={`${baseTheme.text} font-mono text-sm`}>{formatCurrency(goal.targetAmount)}</p>
+                                            <p className={`${baseTheme.text} font-mono text-sm ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(goal.targetAmount)}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className={`text-[10px] ${baseTheme.textMuted} uppercase tracking-wider font-bold`}>Restante</p>
-                                            <p className={`${baseTheme.textHead} font-mono text-sm`}>{formatCurrency(remaining)}</p>
+                                            <p className={`${baseTheme.textHead} font-mono text-sm ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(remaining)}</p>
                                         </div>
                                     </div>
                                     
                                     <div className="relative pt-2">
                                         <div className="flex justify-between text-xs font-bold mb-2">
                                             <span className={theme.text}>{percent.toFixed(0)}%</span>
-                                            <span className={baseTheme.textHead}>{formatCurrency(goal.currentAmount)}</span>
+                                            <span className={`${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(goal.currentAmount)}</span>
                                         </div>
                                         <div className={`w-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-200'} rounded-full h-3 border ${baseTheme.border} overflow-hidden`}>
                                             <div className={`h-full ${theme.primary} transition-all duration-700 ease-out`} style={{ width: `${percent}%` }}></div>
@@ -1176,7 +1330,10 @@ function App() {
                                 const style = getInvestmentStyle(inv.type);
                                 const Icon = style.icon;
                                 return (
-                                    <div key={inv.id} className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-5 ${baseTheme.cardHover} transition-all flex items-center justify-between group`}>
+                                    <div key={inv.id} 
+                                        onClick={() => setSelectedInvestmentId(inv.id)}
+                                        className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-5 ${baseTheme.cardHover} transition-all flex items-center justify-between group cursor-pointer`}
+                                    >
                                         <div className="flex items-center gap-4">
                                             <div className={`p-3 rounded-xl ${style.bg}`}>
                                                 <Icon className={style.color} size={24} />
@@ -1187,8 +1344,13 @@ function App() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className={`text-lg font-bold ${baseTheme.textHead}`}>{formatCurrency(inv.amount)}</p>
-                                            <button onClick={() => handleDelete(inv.id, 'Investimento')} className="text-slate-500 hover:text-rose-400 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Remover</button>
+                                            <p className={`text-lg font-bold ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(inv.amount)}</p>
+                                            <div className="flex items-center justify-end gap-2 mt-1">
+                                                <span className={`text-[10px] ${baseTheme.textMuted} opacity-0 group-hover:opacity-100 transition-opacity`}>Gerenciar</span>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(inv.id, 'Investimento'); }} className="text-slate-500 hover:text-rose-400 text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -1200,11 +1362,11 @@ function App() {
                             <div className="space-y-4">
                                 <div className="flex justify-between text-sm">
                                     <span className={baseTheme.textMuted}>Total Investido</span>
-                                    <span className="text-emerald-500 font-bold">{formatCurrency(investments.reduce((acc, i) => acc + i.amount, 0))}</span>
+                                    <span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(investments.reduce((acc, i) => acc + i.amount, 0))}</span>
                                 </div>
                                 <div className={`w-full h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
                                 <div className={`text-xs ${baseTheme.textMuted} leading-relaxed`}>
-                                    Diversificação é a chave. Tente manter um equilíbrio entre Renda Fixa (Segurança) e Renda Variável (Crescimento).
+                                    Clique em um investimento para aportar mais ou realizar um resgate. O histórico de movimentações ficará salvo.
                                 </div>
                             </div>
                         </div>
@@ -1217,23 +1379,41 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Assinaturas e Fixos</h2>
-                        <button onClick={() => setIsSubModalOpen(true)} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                        <button onClick={() => { setEditingSubscription(null); setIsSubModalOpen(true); }} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {subscriptions.map(sub => (
-                            <div key={sub.id} className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-5 flex items-center justify-between ${baseTheme.cardHover} transition-all`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-100'} rounded-xl border ${baseTheme.border} ${baseTheme.textMuted}`}>
-                                        <Calendar size={20} />
+                        {subscriptions
+                            .filter(sub => !sub.archivedAt) // Mostrar apenas assinaturas ativas na aba de assinaturas
+                            .map(sub => (
+                            <div key={sub.id} className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-5 flex flex-col justify-between ${baseTheme.cardHover} transition-all gap-4 group`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-100'} rounded-xl border ${baseTheme.border} ${baseTheme.textMuted}`}>
+                                            <Calendar size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-bold ${baseTheme.textHead}`}>{sub.name}</h4>
+                                            <p className={`text-xs ${baseTheme.textMuted}`}>Dia {sub.paymentDay} • {sub.category}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className={`font-bold ${baseTheme.textHead}`}>{sub.name}</h4>
-                                        <p className={`text-xs ${baseTheme.textMuted}`}>Dia {sub.paymentDay} • {sub.category}</p>
-                                    </div>
+                                    <p className={`font-bold ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(sub.amount)}</p>
                                 </div>
-                                <div className="text-right">
-                                    <p className={`font-bold ${baseTheme.textHead}`}>{formatCurrency(sub.amount)}</p>
-                                    <button onClick={() => handleDelete(sub.id, 'Assinatura')} className="text-slate-500 hover:text-rose-400 text-xs">Excluir</button>
+                                
+                                <div className={`pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} flex gap-2 justify-end`}>
+                                    <button 
+                                        onClick={() => { setEditingSubscription(sub); setIsSubModalOpen(true); }}
+                                        className={`p-2 rounded-lg text-slate-400 hover:text-${currentTheme}-500 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors border ${baseTheme.border}`}
+                                        title="Editar (cria nova vigência a partir deste mês)"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDelete(sub.id, 'Assinatura')} 
+                                        className={`p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors border ${baseTheme.border}`}
+                                        title="Excluir (cancelar assinatura)"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -1248,10 +1428,20 @@ function App() {
       <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={async (t) => { const newT = { ...t, id: generateId() }; await saveData('transactions', newT); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={async (i) => { const newI = { ...i, id: generateId() }; await saveData('installments', newI); setIsInstModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => setIsSubModalOpen(false)} onSave={async (s) => { const newS = { ...s, id: generateId() }; await saveData('subscriptions', newS); setIsSubModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      
+      {/* Subscriptions Modal now handles Edit */}
+      <AddSubscriptionModal 
+        isOpen={isSubModalOpen} 
+        onClose={() => { setIsSubModalOpen(false); setEditingSubscription(null); }} 
+        onSave={handleSaveSubscription} 
+        initialData={editingSubscription}
+        themeColor={currentTheme} 
+        isDarkMode={isDarkMode} 
+      />
+      
       <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={handleAddInvestment} themeColor={currentTheme} isDarkMode={isDarkMode} />
       
-      {/* New Goal Details Modal */}
+      {/* Detail Modals */}
       <GoalDetailsModal 
         isOpen={!!selectedGoalId} 
         onClose={() => setSelectedGoalId(null)} 
@@ -1261,9 +1451,22 @@ function App() {
         onDeleteTransaction={(id) => deleteData('goal_transactions', id)}
         themeColor={currentTheme}
         isDarkMode={isDarkMode}
+        isPrivacyMode={isPrivacyMode}
       />
 
-      <FinancialReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} aiAnalysis={aiAnalysis} isAnalyzing={isAnalyzing} chartData={pieChartData} totalIncome={totalMonthlyIncome} totalExpense={totalMonthlyExpense} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <InvestmentDetailsModal 
+        isOpen={!!selectedInvestmentId} 
+        onClose={() => setSelectedInvestmentId(null)} 
+        investment={selectedInvestment}
+        transactions={investmentTransactions}
+        onUpdateBalance={handleUpdateInvestmentBalance}
+        onDeleteTransaction={(id) => deleteData('investment_transactions', id)}
+        themeColor={currentTheme}
+        isDarkMode={isDarkMode}
+        isPrivacyMode={isPrivacyMode}
+      />
+
+      <FinancialReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} aiAnalysis={aiAnalysis} isAnalyzing={isAnalyzing} chartData={pieChartData} totalIncome={totalMonthlyIncome} totalExpense={totalMonthlyExpense} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false })} isDarkMode={isDarkMode} />
       <ThemeSelectionModal 
         isOpen={isThemeModalOpen} 

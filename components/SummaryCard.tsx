@@ -11,6 +11,7 @@ interface SummaryCardProps {
   formatter: (value: number) => string;
   details?: React.ReactNode;
   isDarkMode: boolean;
+  isPrivacyMode?: boolean;
 }
 
 export const SummaryCard: React.FC<SummaryCardProps> = ({ 
@@ -20,7 +21,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
   variant = 'default', 
   formatter, 
   details,
-  isDarkMode
+  isDarkMode,
+  isPrivacyMode = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -108,8 +110,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
 
         <div>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{title}</p>
-          <h3 className={`text-2xl md:text-3xl font-black tracking-tight ${currentStyle.text} drop-shadow-sm`}>
-            {formatter(value)}
+          <h3 className={`text-2xl md:text-3xl font-black tracking-tight ${currentStyle.text} drop-shadow-sm transition-all duration-300 ${isPrivacyMode ? 'blur-md select-none' : ''}`}>
+            {isPrivacyMode ? '••••••' : formatter(value)}
           </h3>
         </div>
       </div>
@@ -118,7 +120,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
       <div 
         className={`${isDarkMode ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50/50 border-black/5'} border-t backdrop-blur-md transition-all duration-300 ease-out overflow-hidden ${isExpanded ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}
       >
-        <div className={`p-4 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+        <div className={`p-4 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>
            {details}
         </div>
       </div>

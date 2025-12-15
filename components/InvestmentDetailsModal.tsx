@@ -1,24 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, Minus, History, Calendar, ArrowUpRight, ArrowDownRight, Target, Trash2, BarChart3, List } from 'lucide-react';
-import { FinancialGoal, GoalTransaction } from '../types';
+import { X, Plus, Minus, History, TrendingUp, ArrowUpRight, ArrowDownRight, Trash2, BarChart3, List, Wallet } from 'lucide-react';
+import { Investment, InvestmentTransaction } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-interface GoalDetailsModalProps {
+interface InvestmentDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  goal: FinancialGoal | null;
-  transactions: GoalTransaction[];
-  onUpdateBalance: (amount: number, type: 'add' | 'remove') => void;
+  investment: Investment | null;
+  transactions: InvestmentTransaction[];
+  onUpdateBalance: (amount: number, type: 'buy' | 'sell') => void;
   onDeleteTransaction?: (transactionId: string) => void;
   themeColor: string;
   isDarkMode: boolean;
   isPrivacyMode?: boolean;
 }
 
-export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({ 
+export const InvestmentDetailsModal: React.FC<InvestmentDetailsModalProps> = ({ 
   isOpen, 
   onClose, 
-  goal, 
+  investment, 
   transactions,
   onUpdateBalance,
   onDeleteTransaction,
@@ -26,36 +26,35 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
   isDarkMode,
   isPrivacyMode = false
 }) => {
-  const [mode, setMode] = useState<'view' | 'add' | 'remove'>('view');
+  const [mode, setMode] = useState<'view' | 'buy' | 'sell'>('view');
   const [historyView, setHistoryView] = useState<'list' | 'chart'>('list');
   const [amount, setAmount] = useState('');
 
   // Process data for Chart (Monthly net change)
   const chartData = useMemo(() => {
-    if (!goal) return [];
+    if (!investment) return [];
     
     const monthlyData: Record<string, number> = {};
     const sorted = transactions
-        .filter(t => t.goalId === goal.id)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Chronological for chart building
+        .filter(t => t.investmentId === investment.id)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     sorted.forEach(t => {
         const date = new Date(t.date);
-        // Key ex: "out/23"
         const key = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        const val = t.type === 'deposit' ? t.amount : -t.amount;
+        const val = t.type === 'buy' ? t.amount : -t.amount;
         monthlyData[key] = (monthlyData[key] || 0) + val;
     });
 
     return Object.entries(monthlyData).map(([name, value]) => ({ name, value }));
-  }, [transactions, goal]);
+  }, [transactions, investment]);
 
-  if (!isOpen || !goal) return null;
+  if (!isOpen || !investment) return null;
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    onUpdateBalance(Number(amount), mode === 'add' ? 'add' : 'remove');
+    onUpdateBalance(Number(amount), mode === 'buy' ? 'buy' : 'sell');
     setAmount('');
     setMode('view');
   };
@@ -66,13 +65,10 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
   };
   const formatDate = (isoString: string) => new Date(isoString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-  // Filter transactions for this goal and sort by date descending (for List View)
+  // Filter transactions for this investment and sort by date descending
   const history = transactions
-    .filter(t => t.goalId === goal.id)
+    .filter(t => t.investmentId === investment.id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const percent = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
-  const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
 
   // Map theme string to hex color approx for chart
   const getThemeHex = () => {
@@ -83,7 +79,6 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
      return colors[themeColor] || '#6366f1';
   };
 
-  // Theme styles
   const styles = isDarkMode ? {
       modalBg: 'bg-slate-900 border-slate-800',
       headerBorder: 'border-slate-800 bg-slate-950/50',
@@ -115,8 +110,8 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
         {/* Header */}
         <div className={`flex justify-between items-center p-5 border-b ${styles.headerBorder} shrink-0`}>
           <div className="flex items-center gap-2">
-            <Target className={`text-${themeColor}-500`} size={20} />
-            <h2 className={`text-lg font-bold ${styles.textHead} truncate max-w-[200px]`}>{goal.title}</h2>
+            <TrendingUp className={`text-${themeColor}-500`} size={20} />
+            <h2 className={`text-lg font-bold ${styles.textHead} truncate max-w-[200px]`}>{investment.name}</h2>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-500 transition-colors">
             <X size={20} />
@@ -131,7 +126,7 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
                 <form onSubmit={handleConfirm} className="p-6 space-y-6 animate-in slide-in-from-right duration-200">
                     <div className="text-center">
                         <p className={`text-sm ${styles.textMuted} mb-1`}>
-                            {mode === 'add' ? 'Quanto você quer guardar?' : 'Quanto você vai retirar?'}
+                            {mode === 'buy' ? 'Qual valor você vai aportar?' : 'Qual valor você vai resgatar?'}
                         </p>
                     </div>
 
@@ -147,16 +142,21 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
                             onChange={(e) => setAmount(e.target.value)}
                             autoFocus
                             className={`w-full border-2 rounded-xl pl-12 pr-4 py-4 text-3xl font-bold outline-none transition-colors text-center ${styles.inputBg} ${isDarkMode ? 'text-white' : 'text-slate-900'} ${
-                                mode === 'add' 
+                                mode === 'buy' 
                                 ? `focus:border-emerald-500` 
                                 : `focus:border-rose-500`
                             }`}
                             placeholder="0.00"
                         />
                         </div>
-                        {mode === 'add' && (
+                        {mode === 'buy' && (
                             <p className="text-xs text-center text-emerald-500/80 mt-2">
-                                * Este valor será descontado do seu saldo mensal atual.
+                                * Será registrado como uma despesa (Investimento) no seu fluxo.
+                            </p>
+                        )}
+                        {mode === 'sell' && (
+                            <p className="text-xs text-center text-rose-500/80 mt-2">
+                                * Será registrado como uma receita (Resgate) no seu fluxo.
                             </p>
                         )}
                     </div>
@@ -172,7 +172,7 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
                         <button
                             type="submit"
                             className={`flex-1 py-3 font-bold text-white rounded-xl shadow-lg transition-transform active:scale-95 ${
-                                mode === 'add'
+                                mode === 'buy'
                                 ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'
                                 : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20'
                             }`}
@@ -189,32 +189,26 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
                     
                     {/* Status Card */}
                     <div className={`${styles.cardBg} rounded-xl p-5 border text-center relative overflow-hidden`}>
-                        <div className={`absolute top-0 left-0 h-1 bg-${themeColor}-500 transition-all duration-500`} style={{ width: `${percent}%` }}></div>
-                        <p className={`text-sm ${styles.textMuted} mb-1`}>Saldo Acumulado</p>
-                        <p className={`text-3xl font-bold ${styles.textHead} mb-4 ${isPrivacyMode ? 'blur-md select-none' : ''}`}>{formatCurrency(goal.currentAmount)}</p>
-                        
-                        <div className={`grid grid-cols-2 gap-4 text-xs border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} pt-4`}>
-                            <div>
-                                <span className="text-slate-500 block">Meta Total</span>
-                                <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-mono ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{formatCurrency(goal.targetAmount)}</span>
-                            </div>
-                            <div>
-                                <span className="text-slate-500 block">Falta</span>
-                                <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-mono ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{formatCurrency(remaining)}</span>
+                        <div className="flex justify-center mb-2">
+                            <div className={`p-3 rounded-full bg-${themeColor}-500/10`}>
+                                <Wallet className={`text-${themeColor}-500`} size={24} />
                             </div>
                         </div>
+                        <p className={`text-sm ${styles.textMuted} mb-1`}>Valor Atual Investido</p>
+                        <p className={`text-3xl font-bold ${styles.textHead} mb-2 ${isPrivacyMode ? 'blur-md select-none' : ''}`}>{formatCurrency(investment.amount)}</p>
+                        <p className={`text-xs ${styles.textMuted} uppercase tracking-wider`}>{investment.type}</p>
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-3">
                         <button 
-                            onClick={() => setMode('add')}
+                            onClick={() => setMode('buy')}
                             className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 p-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-colors"
                         >
                             <Plus size={18} /> Aportar
                         </button>
                         <button 
-                            onClick={() => setMode('remove')}
+                            onClick={() => setMode('sell')}
                             className="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 p-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-colors"
                         >
                             <Minus size={18} /> Resgatar
@@ -288,25 +282,25 @@ export const GoalDetailsModal: React.FC<GoalDetailsModalProps> = ({
                             <div className="space-y-3">
                                 {history.length === 0 ? (
                                     <div className={`text-center py-8 text-slate-500 text-xs border border-dashed rounded-xl ${isDarkMode ? 'border-slate-800' : 'border-slate-300'}`}>
-                                        Nenhuma movimentação registrada ainda.
+                                        Nenhuma movimentação registrada.
                                     </div>
                                 ) : (
                                     history.map(t => (
                                         <div key={t.id} className={`flex items-center justify-between p-3 ${styles.itemBg} rounded-xl border`}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${t.type === 'deposit' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                    {t.type === 'deposit' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                                <div className={`p-2 rounded-lg ${t.type === 'buy' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                    {t.type === 'buy' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                                                 </div>
                                                 <div>
                                                     <p className={`text-sm font-medium ${styles.textHead}`}>
-                                                        {t.type === 'deposit' ? 'Aporte' : 'Retirada'}
+                                                        {t.type === 'buy' ? 'Aporte' : 'Resgate'}
                                                     </p>
                                                     <p className={`text-[10px] ${styles.textMuted}`}>{formatDate(t.date)}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'deposit' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                    {t.type === 'deposit' ? '+' : '-'} {formatCurrency(t.amount)}
+                                                <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'buy' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                    {t.type === 'buy' ? '+' : '-'} {formatCurrency(t.amount)}
                                                 </span>
                                                 {onDeleteTransaction && (
                                                     <button 
