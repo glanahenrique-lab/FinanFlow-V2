@@ -84,26 +84,25 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
 
   return (
     <div 
-      className={`relative overflow-hidden rounded-2xl border ${currentStyle.bg} ${currentStyle.border} ${currentStyle.glow} transition-all duration-300 group
-      ${details ? 'cursor-pointer' : ''}`}
+      className={`relative overflow-hidden rounded-2xl border ${currentStyle.bg} ${currentStyle.border} ${currentStyle.glow} transition-all duration-300 group flex flex-col z-20 ${details ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
       onClick={() => details && setIsExpanded(!isExpanded)}
     >
       {/* Background Gradient Mesh */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${currentStyle.gradient} opacity-50`}></div>
+      <div className={`absolute inset-0 bg-gradient-to-br ${currentStyle.gradient} opacity-50 pointer-events-none`}></div>
       
       {/* Large Watermark Icon */}
-      <div className={`absolute -right-6 -bottom-6 opacity-5 rotate-12 transition-transform duration-500 group-hover:scale-110 ${currentStyle.text}`}>
+      <div className={`absolute -right-6 -bottom-6 opacity-5 rotate-12 transition-transform duration-500 group-hover:scale-110 ${currentStyle.text} pointer-events-none`}>
          <Icon size={100} />
       </div>
 
-      <div className="p-5 relative z-10 flex flex-col h-full justify-between">
+      <div className="p-5 relative z-10 flex flex-col justify-between flex-1">
         <div className="flex justify-between items-start mb-2">
           <div className={`p-2.5 rounded-xl ${currentStyle.iconBg} backdrop-blur-sm ${isDarkMode ? 'border border-white/5' : 'border border-black/5'}`}>
             <Icon className={`w-5 h-5 ${currentStyle.text}`} />
           </div>
           {details && (
-             <div className="text-slate-400 group-hover:text-slate-500 transition-colors">
-                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+             <div className={`transition-transform duration-300 ${isDarkMode ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-600'} ${isExpanded ? 'rotate-180' : ''}`}>
+                 <ChevronDown size={16} />
              </div>
           )}
         </div>
@@ -116,11 +115,11 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
         </div>
       </div>
 
-      {/* Detail Panel */}
+      {/* Detail Panel - Increased Max Height for better visibility */}
       <div 
-        className={`${isDarkMode ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50/50 border-black/5'} border-t backdrop-blur-md transition-all duration-300 ease-out overflow-hidden ${isExpanded ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}
+        className={`${isDarkMode ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50/80 border-black/5'} border-t backdrop-blur-md transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
       >
-        <div className={`p-4 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>
+        <div className={`p-4 text-sm relative z-20 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
            {details}
         </div>
       </div>

@@ -93,57 +93,32 @@ const generateId = () => {
 // --- Update Data (Changelog) ---
 const appUpdates = [
     {
-        version: "2.3.0",
-        date: "Hoje",
-        title: "Modo Privacidade & Melhorias",
-        description: "Mais segurança visual para usar o app em público.",
+        version: "2.5.0",
+        date: "Agora",
+        title: "Novo Dashboard",
+        description: "Layout redesenhado para melhor visualização dos seus dados.",
         features: [
-            "Novo botão 'Olho' no topo para ocultar/borrar todos os valores monetários.",
-            "Valores sensíveis agora são protegidos por padrão no Modo Privacidade.",
-            "Melhorias visuais nos modais de detalhes."
+            "Visualização em Grid: Cards de resumo agora no topo para leitura rápida.",
+            "Gráficos Ampliados: Mais espaço para análise de fluxo e categorias.",
+            "Persistência Melhorada: Suas preferências de tema e privacidade agora salvam na nuvem."
         ],
-        icon: EyeOff
+        icon: LayoutDashboard
     },
     {
-        version: "2.2.0",
-        date: "Ontem",
-        title: "Assinaturas Inteligentes",
-        description: "Reformulação completa do gerenciamento de gastos fixos.",
+        version: "2.4.0",
+        date: "Recente",
+        title: "Novo Visual Aurora",
+        description: "Trouxemos a elegância da tela de login para todo o aplicativo.",
         features: [
-            "Histórico automático: Assinaturas antigas ficam salvas ao editar valores.",
-            "Remoção do botão manual de pagar: O cálculo agora é automático baseado na vigência.",
-            "Soft Delete: Ao excluir uma assinatura, o histórico passado é preservado."
-        ],
-        icon: Repeat
-    },
-    {
-        version: "2.1.0",
-        date: "Semana Passada",
-        title: "Gestão Avançada de Parcelas",
-        description: "Controle total sobre suas compras parceladas.",
-        features: [
-            "Opção de 'Adiar Parcela' (Pular mês) com cálculo de juros opcional.",
-            "Opção de 'Antecipar Parcelas' com desconto no fluxo futuro.",
-            "Botão 'Pagar Mês' para baixar todas as parcelas do mês atual de uma vez."
-        ],
-        icon: Layers
-    },
-    {
-        version: "2.0.0",
-        date: "Fevereiro 2024",
-        title: "FinanFlow AI & Design System",
-        description: "O maior update visual e funcional até agora.",
-        features: [
-            "Integração com Gemini AI para análise financeira personalizada.",
-            "Novo sistema de Temas (12 cores) e Modo Escuro/Claro robusto.",
-            "Dashboard Bento Grid com widgets interativos.",
-            "Controle de Metas e Investimentos (Renda Fixa, Ações, Cripto)."
+            "Fundo Dinâmico: Luzes e cores suaves que reagem ao seu tema escolhido.",
+            "Persistência do Modo Privacidade: O app agora lembra se você prefere ocultar os valores.",
+            "Seleção de Texto Temática: Pequenos detalhes que fazem a diferença."
         ],
         icon: Sparkles
     }
 ];
 
-// --- Theme Configurations ---
+// --- Theme Configurations (LIME DERIVED PALETTE) ---
 const themes: Record<ThemeColor, { 
     primary: string; 
     hover: string; 
@@ -157,19 +132,14 @@ const themes: Record<ThemeColor, {
     glowTo: string;
     selection: string;
 }> = {
-    indigo: { primary: 'bg-indigo-600', hover: 'hover:bg-indigo-500', text: 'text-indigo-500', lightText: 'text-indigo-400', bgSoft: 'bg-indigo-500/10', border: 'border-indigo-500/20', shadow: 'shadow-indigo-500/20', gradient: 'from-indigo-600 to-purple-600', glowFrom: 'bg-indigo-600/20', glowTo: 'bg-purple-600/10', selection: 'selection:bg-indigo-500/30 selection:text-indigo-200' },
+    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-500', lightText: 'text-lime-400', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-lime-500/30 selection:text-lime-200' },
     emerald: { primary: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-500', lightText: 'text-emerald-400', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-600 to-teal-600', glowFrom: 'bg-emerald-600/20', glowTo: 'bg-teal-600/10', selection: 'selection:bg-emerald-500/30 selection:text-emerald-200' },
-    violet: { primary: 'bg-violet-600', hover: 'hover:bg-violet-500', text: 'text-violet-500', lightText: 'text-violet-400', bgSoft: 'bg-violet-500/10', border: 'border-violet-500/20', shadow: 'shadow-violet-500/20', gradient: 'from-violet-600 to-fuchsia-600', glowFrom: 'bg-violet-600/20', glowTo: 'bg-fuchsia-600/10', selection: 'selection:bg-violet-500/30 selection:text-violet-200' },
-    rose: { primary: 'bg-rose-600', hover: 'hover:bg-rose-500', text: 'text-rose-500', lightText: 'text-rose-400', bgSoft: 'bg-rose-500/10', border: 'border-rose-500/20', shadow: 'shadow-rose-500/20', gradient: 'from-rose-600 to-pink-600', glowFrom: 'bg-rose-600/20', glowTo: 'bg-pink-600/10', selection: 'selection:bg-rose-500/30 selection:text-rose-200' },
-    cyan: { primary: 'bg-cyan-600', hover: 'hover:bg-cyan-500', text: 'text-cyan-500', lightText: 'text-cyan-400', bgSoft: 'bg-cyan-500/10', border: 'border-cyan-500/20', shadow: 'shadow-cyan-500/20', gradient: 'from-cyan-600 to-sky-600', glowFrom: 'bg-cyan-600/20', glowTo: 'bg-sky-600/10', selection: 'selection:bg-cyan-500/30 selection:text-cyan-200' },
-    amber: { primary: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', lightText: 'text-amber-400', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-amber-500/20', gradient: 'from-amber-500 to-yellow-500', glowFrom: 'bg-amber-500/20', glowTo: 'bg-yellow-600/10', selection: 'selection:bg-amber-500/30 selection:text-amber-200' },
-    sky: { primary: 'bg-sky-500', hover: 'hover:bg-sky-400', text: 'text-sky-400', lightText: 'text-sky-300', bgSoft: 'bg-sky-500/10', border: 'border-sky-500/20', shadow: 'shadow-sky-500/20', gradient: 'from-sky-500 to-blue-500', glowFrom: 'bg-sky-500/20', glowTo: 'bg-blue-600/10', selection: 'selection:bg-sky-500/30 selection:text-sky-200' },
-    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-400', lightText: 'text-lime-300', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-lime-500/30 selection:text-lime-200' },
+    green: { primary: 'bg-green-600', hover: 'hover:bg-green-500', text: 'text-green-500', lightText: 'text-green-400', bgSoft: 'bg-green-500/10', border: 'border-green-500/20', shadow: 'shadow-green-500/20', gradient: 'from-green-600 to-emerald-600', glowFrom: 'bg-green-600/20', glowTo: 'bg-emerald-600/10', selection: 'selection:bg-green-500/30 selection:text-green-200' },
+    teal: { primary: 'bg-teal-400', hover: 'hover:bg-teal-300', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-400 to-cyan-500', glowFrom: 'bg-teal-500/20', glowTo: 'bg-cyan-600/10', selection: 'selection:bg-teal-500/30 selection:text-teal-200' },
+    cyan: { primary: 'bg-cyan-500', hover: 'hover:bg-cyan-400', text: 'text-cyan-500', lightText: 'text-cyan-400', bgSoft: 'bg-cyan-500/10', border: 'border-cyan-500/20', shadow: 'shadow-cyan-500/20', gradient: 'from-cyan-500 to-sky-500', glowFrom: 'bg-cyan-500/20', glowTo: 'bg-sky-600/10', selection: 'selection:bg-cyan-500/30 selection:text-cyan-200' },
+    yellow: { primary: 'bg-yellow-400', hover: 'hover:bg-yellow-300', text: 'text-yellow-400', lightText: 'text-yellow-300', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', shadow: 'shadow-yellow-500/20', gradient: 'from-yellow-400 to-orange-500', glowFrom: 'bg-yellow-500/20', glowTo: 'bg-orange-600/10', selection: 'selection:bg-yellow-500/30 selection:text-yellow-200' },
+    amber: { primary: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', lightText: 'text-amber-400', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-amber-500/20', gradient: 'from-amber-500 to-orange-500', glowFrom: 'bg-amber-500/20', glowTo: 'bg-orange-600/10', selection: 'selection:bg-amber-500/30 selection:text-amber-200' },
     slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200' },
-    orange: { primary: 'bg-orange-500', hover: 'hover:bg-orange-400', text: 'text-orange-500', lightText: 'text-orange-400', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', shadow: 'shadow-orange-500/20', gradient: 'from-orange-500 to-red-500', glowFrom: 'bg-orange-500/20', glowTo: 'bg-red-600/10', selection: 'selection:bg-orange-500/30 selection:text-orange-200' },
-    pink: { primary: 'bg-pink-500', hover: 'hover:bg-pink-400', text: 'text-pink-500', lightText: 'text-pink-400', bgSoft: 'bg-pink-500/10', border: 'border-pink-500/20', shadow: 'shadow-pink-500/20', gradient: 'from-pink-500 to-rose-500', glowFrom: 'bg-pink-500/20', glowTo: 'bg-rose-600/10', selection: 'selection:bg-pink-500/30 selection:text-pink-200' },
-    fuchsia: { primary: 'bg-fuchsia-600', hover: 'hover:bg-fuchsia-500', text: 'text-fuchsia-500', lightText: 'text-fuchsia-400', bgSoft: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20', shadow: 'shadow-fuchsia-500/20', gradient: 'from-fuchsia-600 to-purple-600', glowFrom: 'bg-fuchsia-600/20', glowTo: 'bg-purple-600/10', selection: 'selection:bg-fuchsia-500/30 selection:text-fuchsia-200' },
-    teal: { primary: 'bg-teal-500', hover: 'hover:bg-teal-400', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-500 to-emerald-500', glowFrom: 'bg-teal-500/20', glowTo: 'bg-emerald-600/10', selection: 'selection:bg-teal-500/30 selection:text-teal-200' },
 };
 
 const getInvestmentStyle = (type: string) => {
@@ -189,23 +159,23 @@ function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
   
-  // State Initialization (Try LocalStorage first for instant load)
+  // -- STATES DE PREFERÊNCIA (Com fallback para LocalStorage) --
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedMode = localStorage.getItem('isDarkMode');
-    return savedMode !== null ? JSON.parse(savedMode) : true;
+    try {
+        const savedMode = localStorage.getItem('isDarkMode');
+        return savedMode !== null ? JSON.parse(savedMode) : true;
+    } catch { return true; }
   });
   const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
     try {
         const savedMode = localStorage.getItem('finanflow_privacy_mode');
         return savedMode !== null ? JSON.parse(savedMode) : false;
-    } catch (error) {
-        return false;
-    }
+    } catch { return false; }
   });
 
-  // Ref to track if initial cloud sync is done to prevent overwriting cloud with stale local state
-  const isCloudSynced = useRef(false);
+  // Flag para evitar sobrescrita inicial errada
+  const isInitialLoad = useRef(true);
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -255,7 +225,7 @@ function App() {
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Auth Effect
+  // --- AUTH EFFECT & DATA SYNC ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -269,44 +239,55 @@ function App() {
         setCurrentUser(user);
         
         try {
-            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+            
             if (userDoc.exists()) {
-                const userData = userDoc.data() as UserProfile;
+                const userData = userDoc.data() as UserProfile & { preferences?: any };
                 setUserName(userData.name || user.displayName || 'Investidor');
                 setUserPhoto(userData.photo || null);
-
-                // --- SYNC PREFERENCES FROM CLOUD ---
+                
+                // Sync Preferences from Firestore - Critical Fix for Persistence
                 if (userData.preferences) {
-                    isCloudSynced.current = true; // Mark as synced so effects don't overwrite immediately
-                    setCurrentTheme(userData.preferences.theme as ThemeColor || 'lime');
-                    setIsDarkMode(userData.preferences.isDarkMode ?? true);
-                    setIsPrivacyMode(userData.preferences.isPrivacyMode ?? false);
-                    
-                    // Update LocalStorage to match Cloud (Consistency)
-                    localStorage.setItem('appTheme', userData.preferences.theme || 'lime');
-                    localStorage.setItem('isDarkMode', JSON.stringify(userData.preferences.isDarkMode ?? true));
-                    localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode ?? false));
-                } else {
-                    isCloudSynced.current = true; // No cloud prefs, use local
+                    if (userData.preferences.theme) {
+                        setCurrentTheme(userData.preferences.theme);
+                        localStorage.setItem('appTheme', userData.preferences.theme);
+                    }
+                    if (userData.preferences.isDarkMode !== undefined) {
+                        setIsDarkMode(userData.preferences.isDarkMode);
+                        localStorage.setItem('isDarkMode', JSON.stringify(userData.preferences.isDarkMode));
+                    }
+                    if (userData.preferences.isPrivacyMode !== undefined) {
+                        setIsPrivacyMode(userData.preferences.isPrivacyMode);
+                        localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode));
+                    }
                 }
             } else {
                 setUserName(user.displayName || 'Investidor');
-                const savedPhoto = localStorage.getItem(`user_photo_${user.uid}`);
-                setUserPhoto(savedPhoto);
-                isCloudSynced.current = true;
+                // Save defaults if first time
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    name: user.displayName || 'Investidor',
+                    email: user.email,
+                    preferences: {
+                        theme: currentTheme,
+                        isDarkMode: isDarkMode,
+                        isPrivacyMode: isPrivacyMode
+                    }
+                }, { merge: true });
             }
         } catch (error) {
             console.error("Erro ao buscar perfil:", error);
-            setUserName(user.displayName || 'Investidor');
-            isCloudSynced.current = true;
+        } finally {
+            // Unblock saving preferences after initial load is done
+            setTimeout(() => { isInitialLoad.current = false; }, 1000);
         }
         
       } else {
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
-        isCloudSynced.current = false;
-        // Clear data
+        // Reset defaults on logout
         setTransactions([]);
         setInstallments([]);
         setGoals([]);
@@ -314,43 +295,38 @@ function App() {
         setSubscriptions([]);
         setInvestments([]);
         setInvestmentTransactions([]);
+        isInitialLoad.current = true;
       }
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // --- PERSISTENCE EFFECTS (LOCAL + FIRESTORE) ---
-  
-  // Theme Persistence
+  // --- SAVE PREFERENCES TO FIRESTORE ---
   useEffect(() => {
+      // LocalStorage Sync
       localStorage.setItem('appTheme', currentTheme);
-      if (currentUser && isCloudSynced.current) {
-          const userRef = doc(db, "users", currentUser.uid);
-          setDoc(userRef, { preferences: { theme: currentTheme } }, { merge: true }).catch(err => console.error("Err saving theme", err));
-      }
-  }, [currentTheme, currentUser]);
-
-  // Dark Mode Persistence
-  useEffect(() => {
       localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
-      if (currentUser && isCloudSynced.current) {
-          const userRef = doc(db, "users", currentUser.uid);
-          setDoc(userRef, { preferences: { isDarkMode } }, { merge: true }).catch(err => console.error("Err saving darkmode", err));
-      }
-  }, [isDarkMode, currentUser]);
-
-  // Privacy Mode Persistence
-  useEffect(() => {
       localStorage.setItem('finanflow_privacy_mode', JSON.stringify(isPrivacyMode));
-      if (currentUser && isCloudSynced.current) {
-          const userRef = doc(db, "users", currentUser.uid);
-          setDoc(userRef, { preferences: { isPrivacyMode } }, { merge: true }).catch(err => console.error("Err saving privacy", err));
+
+      // Firestore Sync
+      if (currentUser && !isInitialLoad.current) {
+          const updatePrefs = async () => {
+              try {
+                  await updateDoc(doc(db, "users", currentUser.uid), {
+                      "preferences.theme": currentTheme,
+                      "preferences.isDarkMode": isDarkMode,
+                      "preferences.isPrivacyMode": isPrivacyMode
+                  });
+              } catch (e) {
+                  console.warn("Sync pref failed", e);
+              }
+          };
+          updatePrefs();
       }
-  }, [isPrivacyMode, currentUser]);
+  }, [currentTheme, isDarkMode, isPrivacyMode, currentUser]);
 
-
-  // FIRESTORE SYNC EFFECT (Data)
+  // FIRESTORE DATA LISTENERS
   useEffect(() => {
     if (!currentUser) return;
 
@@ -537,13 +513,6 @@ function App() {
     return tDate.getMonth() === currentDate.getMonth() && tDate.getFullYear() === currentDate.getFullYear();
   });
 
-  const currentMonthInvestments = investments.filter(i => {
-    // Para fluxo de caixa, consideramos apenas quando foi criado ou se houve "buy" no mês
-    // Porém, a estrutura atual de Investment é um ativo. 
-    // Vamos considerar o histórico 'investmentTransactions' para o fluxo.
-    return false; // Deprecated logic. We use investmentTransactions now.
-  });
-  
   // Calculate cash flow from investment transactions for current month
   const currentMonthInvTrans = investmentTransactions.filter(it => {
       const itDate = new Date(it.date);
@@ -1021,63 +990,81 @@ function App() {
             className="p-4 lg:p-8 max-w-[1920px] mx-auto space-y-8 animate-fade-in-right duration-500"
         >
             
-            {/* --- DASHBOARD VIEW --- */}
+            {/* --- DASHBOARD VIEW (NEW LAYOUT) --- */}
             {activeTab === 'dashboard' && (
                 <>
-                    {/* BENTO GRID LAYOUT */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        
-                        {/* LEFT: SUMMARY QUADRANT (The "Balloon" Grid) */}
-                        <div className="lg:col-span-5 grid grid-cols-2 gap-4 h-full content-start">
-                            <SummaryCard 
-                                title="Receitas" 
-                                value={totalMonthlyIncome} 
-                                icon={ArrowUpRight} 
-                                variant="income"
-                                formatter={formatCurrency}
-                                isDarkMode={isDarkMode}
-                                isPrivacyMode={isPrivacyMode}
-                            />
-                            <SummaryCard 
-                                title="Despesas" 
-                                value={totalMonthlyExpense} 
-                                icon={ArrowDownRight} 
-                                variant="expense"
-                                formatter={formatCurrency}
-                                isDarkMode={isDarkMode}
-                                isPrivacyMode={isPrivacyMode}
-                                details={
-                                    <div className="space-y-1">
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Variáveis</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalVariableExpense)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Fixas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalFixedExpense)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Parcelas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalInstallmentsCost)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Invest</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalInvestmentsVal)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Metas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{getDisplayValue(totalGoalDepositsVal)}</span></div>
-                                    </div>
-                                }
-                            />
-                            <SummaryCard 
-                                title="Saldo Atual" 
-                                value={balance} 
-                                icon={Wallet} 
-                                variant={balance < 0 ? 'alert' : 'balance'} 
-                                formatter={formatCurrency}
-                                isDarkMode={isDarkMode}
-                                isPrivacyMode={isPrivacyMode}
-                            />
-                            <SummaryCard 
-                                title="Previsão Gastos" 
-                                value={totalFixedExpense + totalInstallmentsCost} 
-                                icon={Calculator} 
-                                variant="default" 
-                                formatter={formatCurrency}
-                                isDarkMode={isDarkMode}
-                                isPrivacyMode={isPrivacyMode}
-                            />
-                        </div>
+                    {/* ROW 1: Summary Cards (Grid Top) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+                        <SummaryCard 
+                            title="Receitas" 
+                            value={totalMonthlyIncome} 
+                            icon={ArrowUpRight} 
+                            variant="income"
+                            formatter={formatCurrency}
+                            isDarkMode={isDarkMode}
+                            isPrivacyMode={isPrivacyMode}
+                            details={
+                                <div className="space-y-1.5 pt-2">
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Variáveis</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalVariableIncome)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Resgates Inv.</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalInvSells)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Resgates Metas</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalGoalWithdrawalsVal)}</span></div>
+                                </div>
+                            }
+                        />
+                        <SummaryCard 
+                            title="Despesas" 
+                            value={totalMonthlyExpense} 
+                            icon={ArrowDownRight} 
+                            variant="expense"
+                            formatter={formatCurrency}
+                            isDarkMode={isDarkMode}
+                            isPrivacyMode={isPrivacyMode}
+                            details={
+                                <div className="space-y-1.5 pt-2">
+                                <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Variáveis</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalVariableExpense)}</span></div>
+                                <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Fixas</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalFixedExpense)}</span></div>
+                                <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Parcelas</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalInstallmentsCost)}</span></div>
+                                <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Investimentos</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalInvestmentsVal)}</span></div>
+                                <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Metas</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalGoalDepositsVal)}</span></div>
+                                </div>
+                            }
+                        />
+                        <SummaryCard 
+                            title="Saldo Atual" 
+                            value={balance} 
+                            icon={Wallet} 
+                            variant={balance < 0 ? 'alert' : 'balance'} 
+                            formatter={formatCurrency}
+                            isDarkMode={isDarkMode}
+                            isPrivacyMode={isPrivacyMode}
+                            details={
+                                <div className="space-y-1.5 pt-2">
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Total Entradas</span><span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalMonthlyIncome)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Total Saídas</span><span className={`text-rose-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalMonthlyExpense)}</span></div>
+                                </div>
+                            }
+                        />
+                        <SummaryCard 
+                            title="Previsão Gastos" 
+                            value={totalFixedExpense + totalInstallmentsCost} 
+                            icon={Calculator} 
+                            variant="default" 
+                            formatter={formatCurrency}
+                            isDarkMode={isDarkMode}
+                            isPrivacyMode={isPrivacyMode}
+                            details={
+                                <div className="space-y-1.5 pt-2">
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Fixos/Assinaturas</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalFixedExpense)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className={baseTheme.textMuted}>Parcelas Futuras</span><span className={`${baseTheme.textHead} font-medium ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(totalInstallmentsCost)}</span></div>
+                                </div>
+                            }
+                        />
+                    </div>
 
-                        {/* RIGHT: MAIN CHART (Cash Flow) */}
-                        <div className={`lg:col-span-7 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between`}>
+                    {/* ROW 2: Charts Area */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        {/* Main Chart (2/3 width) */}
+                        <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col`}>
                              <div className={`absolute top-0 right-0 w-64 h-64 bg-${currentTheme}-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none`}></div>
                              <div className="flex justify-between items-start mb-6 z-10">
                                 <div>
@@ -1085,7 +1072,7 @@ function App() {
                                         <LineChart className={`text-${currentTheme}-500`} size={20} />
                                         Fluxo de Caixa
                                     </h3>
-                                    <p className={`text-sm ${baseTheme.textMuted}`}>Comparativo Entrada vs Saída</p>
+                                    <p className={`text-sm ${baseTheme.textMuted}`}>Entradas vs Saídas no Mês</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <div className={`flex items-center gap-1.5 px-3 py-1 ${baseTheme.bg} rounded-full border ${baseTheme.border}`}>
@@ -1099,7 +1086,7 @@ function App() {
                                 </div>
                              </div>
 
-                             <div className="h-[240px] w-full z-10">
+                             <div className="h-[280px] w-full z-10">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={monthlyFlowData} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }} barSize={40}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#1e293b' : '#e2e8f0'} horizontal={false} />
@@ -1113,57 +1100,63 @@ function App() {
                                 </ResponsiveContainer>
                              </div>
                         </div>
-                    </div>
 
-                    {/* SECONDARY ROW */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* 1. Spending Distribution */}
-                        <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm`}>
-                            <h3 className={`text-base font-bold ${baseTheme.textHead} mb-4 flex items-center gap-2`}>
+                        {/* Distribution Chart (1/3 width) */}
+                        <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm flex flex-col`}>
+                            <h3 className={`text-base font-bold ${baseTheme.textHead} mb-2 flex items-center gap-2`}>
                                 <PieChartIcon className={`text-${currentTheme}-500`} size={18} />
-                                Para onde foi o dinheiro?
+                                Categorias
                             </h3>
-                            <div className="h-[200px]">
+                            <p className={`text-xs ${baseTheme.textMuted} mb-4`}>Maiores despesas do mês</p>
+                            
+                            <div className="flex-1 min-h-[220px]">
                                 {pieChartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                                            <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
                                                 {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'][index % 5]} stroke="transparent" />)}
                                             </Pie>
-                                            <Tooltip formatter={(val:number) => isPrivacyMode ? '••••' : formatCurrency(val)} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '8px', color: isDarkMode ? '#f1f5f9' : '#1e293b' }} itemStyle={{ color: isDarkMode ? '#fff' : '#000' }} />
+                                            <Tooltip formatter={(val:number) => isPrivacyMode ? '••••' : formatCurrency(val)} contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e2e8f0', borderRadius: '8px', color: isDarkMode ? '#f1f5f9' : '#1e293b', fontSize: '12px' }} itemStyle={{ color: isDarkMode ? '#fff' : '#000' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <div className={`h-full flex flex-col items-center justify-center ${baseTheme.textMuted} text-sm border-2 border-dashed ${baseTheme.border} rounded-xl`}>
-                                        <p>Sem dados de despesa</p>
+                                    <div className={`h-full flex flex-col items-center justify-center ${baseTheme.textMuted} text-xs border-2 border-dashed ${baseTheme.border} rounded-xl`}>
+                                        <p>Sem dados</p>
                                     </div>
                                 )}
                             </div>
                         </div>
+                    </div>
 
-                        {/* 2. Recent Activity List */}
+                    {/* ROW 3: Widgets & Lists */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        {/* Recent Activity */}
                         <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm flex flex-col`}>
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className={`text-base font-bold ${baseTheme.textHead} flex items-center gap-2`}>
-                                    <Clock className={`text-${currentTheme}-500`} size={18} />
-                                    Atividade Recente
-                                </h3>
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className={`text-base font-bold ${baseTheme.textHead} flex items-center gap-2`}>
+                                        <Clock className={`text-${currentTheme}-500`} size={18} />
+                                        Atividade Recente
+                                    </h3>
+                                </div>
                                 <button onClick={() => setActiveTab('transactions')} className={`text-xs text-${currentTheme}-500 hover:underline font-medium`}>Ver tudo</button>
                             </div>
                             <div className="flex-1 space-y-3 overflow-hidden">
                                 {currentMonthTransactions.length === 0 ? (
-                                    <div className={`h-full flex items-center justify-center ${baseTheme.textMuted} text-sm`}>Nenhuma transação</div>
+                                    <div className={`h-32 flex items-center justify-center ${baseTheme.textMuted} text-sm bg-slate-100/5 rounded-xl border border-dashed ${baseTheme.border}`}>
+                                        Nenhuma transação este mês.
+                                    </div>
                                 ) : (
-                                    currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4).map(t => (
-                                        <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-slate-950 hover:bg-slate-950/80' : 'bg-slate-50 hover:bg-slate-100'} border ${baseTheme.border} transition-colors`}>
+                                    currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(t => (
+                                        <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-slate-950/50 hover:bg-slate-950' : 'bg-slate-50 hover:bg-slate-100'} border ${baseTheme.border} transition-colors group`}>
                                             <div className="flex items-center gap-3">
                                                 <div className={`p-2 rounded-lg ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                     {t.type === 'income' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                                                 </div>
-                                                <div className="overflow-hidden">
-                                                    <p className={`font-medium ${baseTheme.text} text-sm truncate w-32 sm:w-auto`}>{t.description}</p>
-                                                    <p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}</p>
+                                                <div>
+                                                    <p className={`font-medium ${baseTheme.text} text-sm`}>{t.description}</p>
+                                                    <p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})} • {t.category}</p>
                                                 </div>
                                             </div>
                                             <span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>
@@ -1175,55 +1168,66 @@ function App() {
                             </div>
                         </div>
 
-                        {/* 3. AI & Goals Quick Access */}
-                        <div className="flex flex-col gap-4">
+                        {/* AI & Goals Side */}
+                        <div className="flex flex-col gap-6">
+                            
                             {/* AI Card */}
-                            <div className={`relative overflow-hidden rounded-3xl border ${theme.border} p-6 shadow-lg bg-gradient-to-br ${theme.gradient} group cursor-pointer transition-transform hover:scale-[1.02]`}
+                            <div className={`relative overflow-hidden rounded-3xl border ${theme.border} p-6 shadow-lg bg-gradient-to-br ${theme.gradient} group cursor-pointer transition-transform hover:scale-[1.01]`}
                                 onClick={handleGenerateReport}
                             >
                                 <div className="relative z-10 text-black">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <BrainCircuit size={20} className="animate-pulse" />
-                                        <span className="font-bold text-lg">Gemini Advisor</span>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-black/20 p-2 rounded-lg backdrop-blur-sm">
+                                                <BrainCircuit size={20} className="animate-pulse text-white" />
+                                            </div>
+                                            <span className="font-bold text-lg">Gemini Advisor</span>
+                                        </div>
+                                        <Sparkles size={18} className="opacity-50" />
                                     </div>
-                                    <p className="text-black/80 text-sm mb-4 line-clamp-2">Receba insights inteligentes sobre como otimizar seu orçamento este mês.</p>
-                                    <div className="flex items-center text-xs font-bold uppercase tracking-wider bg-black/10 w-fit px-3 py-1 rounded-full backdrop-blur-md">
-                                        Gerar Relatório <Sparkles size={12} className="ml-1" />
-                                    </div>
+                                    <p className="text-black/80 text-sm mb-4 font-medium leading-relaxed">
+                                        Obtenha uma análise detalhada dos seus gastos e dicas personalizadas para economizar este mês.
+                                    </p>
+                                    <button className="flex items-center justify-center w-full text-xs font-bold uppercase tracking-wider bg-black/80 text-white hover:bg-black py-3 rounded-xl backdrop-blur-md transition-colors shadow-lg">
+                                        Gerar Relatório Inteligente
+                                    </button>
                                 </div>
-                                <div className="absolute -right-8 -bottom-8 opacity-20">
-                                    <BrainCircuit size={120} />
+                                <div className="absolute -right-12 -bottom-12 opacity-10 rotate-12">
+                                    <BrainCircuit size={180} />
                                 </div>
                             </div>
 
-                            {/* Goals Shortcut */}
-                            <div className={`flex-1 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-5 shadow-sm ${baseTheme.cardHover} transition-colors cursor-pointer`}
-                                onClick={() => setActiveTab('goals')}
-                            >
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className={`font-bold ${baseTheme.textHead} text-sm`}>Metas Ativas</h4>
-                                    <ArrowRight size={14} className={baseTheme.textMuted} />
+                            {/* Mini Goals */}
+                            <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-5 shadow-sm flex-1`}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className={`font-bold ${baseTheme.textHead} text-sm flex items-center gap-2`}>
+                                        <Target className={`text-${currentTheme}-500`} size={16} />
+                                        Metas Principais
+                                    </h4>
+                                    <button onClick={() => setActiveTab('goals')} className="text-xs text-slate-500 hover:text-slate-400">Ver todas</button>
                                 </div>
                                 {goals.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {goals.slice(0, 2).map(g => (
-                                            <div key={g.id}>
-                                                <div className="flex justify-between text-xs mb-1">
-                                                    <span className={baseTheme.textMuted}>{g.title}</span>
-                                                    <span className={baseTheme.text}>{Math.round((g.currentAmount / g.targetAmount) * 100)}%</span>
+                                    <div className="space-y-4">
+                                        {goals.slice(0, 3).map(g => (
+                                            <div key={g.id} className="group cursor-pointer" onClick={() => setSelectedGoalId(g.id)}>
+                                                <div className="flex justify-between text-xs mb-1.5">
+                                                    <span className={`font-medium ${baseTheme.text}`}>{g.title}</span>
+                                                    <span className={baseTheme.textMuted}>{Math.round((g.currentAmount / g.targetAmount) * 100)}%</span>
                                                 </div>
-                                                <div className={`h-1.5 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'} rounded-full overflow-hidden`}>
-                                                    <div className={`h-full ${theme.primary}`} style={{ width: `${Math.min(100, (g.currentAmount / g.targetAmount) * 100)}%` }}></div>
+                                                <div className={`h-2 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'} rounded-full overflow-hidden`}>
+                                                    <div className={`h-full ${theme.primary} transition-all duration-1000 group-hover:opacity-80`} style={{ width: `${Math.min(100, (g.currentAmount / g.targetAmount) * 100)}%` }}></div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className={`text-xs ${baseTheme.textMuted}`}>Nenhuma meta definida.</p>
+                                    <div className={`text-center py-6 text-xs ${baseTheme.textMuted}`}>
+                                        Defina metas para acompanhar seu progresso.
+                                    </div>
                                 )}
                             </div>
-                        </div>
 
+                        </div>
                     </div>
                 </>
             )}

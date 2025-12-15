@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Check, Moon, Sun } from 'lucide-react';
 
-export type ThemeColor = 'indigo' | 'emerald' | 'violet' | 'rose' | 'cyan' | 'amber' | 'sky' | 'lime' | 'slate' | 'orange' | 'pink' | 'fuchsia' | 'teal';
+export type ThemeColor = 'lime' | 'emerald' | 'green' | 'teal' | 'cyan' | 'yellow' | 'amber' | 'slate';
 
 interface ThemeSelectionModalProps {
   isOpen: boolean;
@@ -23,19 +23,14 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
   if (!isOpen) return null;
 
   const themes: { id: ThemeColor; name: string; colorClass: string }[] = [
-    { id: 'indigo', name: 'Indigo Profundo', colorClass: 'bg-indigo-600' },
-    { id: 'violet', name: 'Violeta Ultra', colorClass: 'bg-violet-600' },
-    { id: 'fuchsia', name: 'Fúcsia Neon', colorClass: 'bg-fuchsia-600' },
-    { id: 'pink', name: 'Pink Pop', colorClass: 'bg-pink-500' },
-    { id: 'rose', name: 'Rosa Vibrante', colorClass: 'bg-rose-600' },
-    { id: 'orange', name: 'Laranja Solar', colorClass: 'bg-orange-500' },
-    { id: 'amber', name: 'Âmbar', colorClass: 'bg-amber-500' },
-    { id: 'emerald', name: 'Esmeralda', colorClass: 'bg-emerald-600' },
-    { id: 'teal', name: 'Turquesa', colorClass: 'bg-teal-500' },
-    { id: 'cyan', name: 'Ciano Futuro', colorClass: 'bg-cyan-600' },
-    { id: 'sky', name: 'Céu de Verão', colorClass: 'bg-sky-500' },
-    { id: 'lime', name: 'Lima Ácida', colorClass: 'bg-lime-500' },
-    { id: 'slate', name: 'Monocromático', colorClass: 'bg-slate-500' },
+    { id: 'lime', name: 'Lima Neon (Padrão)', colorClass: 'bg-lime-500' },
+    { id: 'emerald', name: 'Esmeralda', colorClass: 'bg-emerald-500' },
+    { id: 'green', name: 'Verde Mata', colorClass: 'bg-green-600' },
+    { id: 'teal', name: 'Menta Fresca', colorClass: 'bg-teal-400' },
+    { id: 'cyan', name: 'Ciano', colorClass: 'bg-cyan-500' },
+    { id: 'yellow', name: 'Citrus', colorClass: 'bg-yellow-400' },
+    { id: 'amber', name: 'Ouro', colorClass: 'bg-amber-500' },
+    { id: 'slate', name: 'Grafite Neutro', colorClass: 'bg-slate-500' },
   ];
 
   return (
@@ -55,7 +50,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
             {/* Mode Toggle */}
             <div className={`p-4 rounded-xl border flex items-center justify-between ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-orange-500/20 text-orange-500'}`}>
+                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-lime-500/20 text-lime-400' : 'bg-amber-500/20 text-amber-500'}`}>
                         {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
                     </div>
                     <div>
@@ -68,7 +63,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
                 
                 <button 
                     onClick={onToggleDarkMode}
-                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${isDarkMode ? 'bg-lime-600' : 'bg-slate-300'}`}
                 >
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isDarkMode ? 'left-7' : 'left-1'}`}></div>
                 </button>
@@ -78,8 +73,8 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
 
             {/* Colors Grid */}
             <div>
-                <p className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Cor de Destaque</p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
+                <p className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Tons de FinanFlow</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
                 {themes.map((theme) => (
                     <button
                     key={theme.id}
@@ -91,7 +86,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
                     }`}
                     >
                     <div className={`w-8 h-8 rounded-full ${theme.colorClass} shadow-md flex items-center justify-center`}>
-                        {currentTheme === theme.id && <Check size={14} className="text-white" />}
+                        {currentTheme === theme.id && <Check size={14} className={['lime', 'yellow', 'cyan', 'teal'].includes(theme.id) ? "text-slate-900" : "text-white"} />}
                     </div>
                     <span className={`text-[10px] font-medium text-center ${
                         currentTheme === theme.id 
