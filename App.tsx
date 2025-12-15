@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -155,20 +155,21 @@ const themes: Record<ThemeColor, {
     gradient: string;
     glowFrom: string;
     glowTo: string;
+    selection: string;
 }> = {
-    indigo: { primary: 'bg-indigo-600', hover: 'hover:bg-indigo-500', text: 'text-indigo-500', lightText: 'text-indigo-400', bgSoft: 'bg-indigo-500/10', border: 'border-indigo-500/20', shadow: 'shadow-indigo-500/20', gradient: 'from-indigo-600 to-purple-600', glowFrom: 'bg-indigo-600/20', glowTo: 'bg-purple-600/10' },
-    emerald: { primary: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-500', lightText: 'text-emerald-400', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-600 to-teal-600', glowFrom: 'bg-emerald-600/20', glowTo: 'bg-teal-600/10' },
-    violet: { primary: 'bg-violet-600', hover: 'hover:bg-violet-500', text: 'text-violet-500', lightText: 'text-violet-400', bgSoft: 'bg-violet-500/10', border: 'border-violet-500/20', shadow: 'shadow-violet-500/20', gradient: 'from-violet-600 to-fuchsia-600', glowFrom: 'bg-violet-600/20', glowTo: 'bg-fuchsia-600/10' },
-    rose: { primary: 'bg-rose-600', hover: 'hover:bg-rose-500', text: 'text-rose-500', lightText: 'text-rose-400', bgSoft: 'bg-rose-500/10', border: 'border-rose-500/20', shadow: 'shadow-rose-500/20', gradient: 'from-rose-600 to-pink-600', glowFrom: 'bg-rose-600/20', glowTo: 'bg-pink-600/10' },
-    cyan: { primary: 'bg-cyan-600', hover: 'hover:bg-cyan-500', text: 'text-cyan-500', lightText: 'text-cyan-400', bgSoft: 'bg-cyan-500/10', border: 'border-cyan-500/20', shadow: 'shadow-cyan-500/20', gradient: 'from-cyan-600 to-sky-600', glowFrom: 'bg-cyan-600/20', glowTo: 'bg-sky-600/10' },
-    amber: { primary: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', lightText: 'text-amber-400', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-amber-500/20', gradient: 'from-amber-500 to-yellow-500', glowFrom: 'bg-amber-500/20', glowTo: 'bg-yellow-600/10' },
-    sky: { primary: 'bg-sky-500', hover: 'hover:bg-sky-400', text: 'text-sky-400', lightText: 'text-sky-300', bgSoft: 'bg-sky-500/10', border: 'border-sky-500/20', shadow: 'shadow-sky-500/20', gradient: 'from-sky-500 to-blue-500', glowFrom: 'bg-sky-500/20', glowTo: 'bg-blue-600/10' },
-    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-400', lightText: 'text-lime-300', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10' },
-    slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10' },
-    orange: { primary: 'bg-orange-500', hover: 'hover:bg-orange-400', text: 'text-orange-500', lightText: 'text-orange-400', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', shadow: 'shadow-orange-500/20', gradient: 'from-orange-500 to-red-500', glowFrom: 'bg-orange-500/20', glowTo: 'bg-red-600/10' },
-    pink: { primary: 'bg-pink-500', hover: 'hover:bg-pink-400', text: 'text-pink-500', lightText: 'text-pink-400', bgSoft: 'bg-pink-500/10', border: 'border-pink-500/20', shadow: 'shadow-pink-500/20', gradient: 'from-pink-500 to-rose-500', glowFrom: 'bg-pink-500/20', glowTo: 'bg-rose-600/10' },
-    fuchsia: { primary: 'bg-fuchsia-600', hover: 'hover:bg-fuchsia-500', text: 'text-fuchsia-500', lightText: 'text-fuchsia-400', bgSoft: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20', shadow: 'shadow-fuchsia-500/20', gradient: 'from-fuchsia-600 to-purple-600', glowFrom: 'bg-fuchsia-600/20', glowTo: 'bg-purple-600/10' },
-    teal: { primary: 'bg-teal-500', hover: 'hover:bg-teal-400', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-500 to-emerald-500', glowFrom: 'bg-teal-500/20', glowTo: 'bg-emerald-600/10' },
+    indigo: { primary: 'bg-indigo-600', hover: 'hover:bg-indigo-500', text: 'text-indigo-500', lightText: 'text-indigo-400', bgSoft: 'bg-indigo-500/10', border: 'border-indigo-500/20', shadow: 'shadow-indigo-500/20', gradient: 'from-indigo-600 to-purple-600', glowFrom: 'bg-indigo-600/20', glowTo: 'bg-purple-600/10', selection: 'selection:bg-indigo-500/30 selection:text-indigo-200' },
+    emerald: { primary: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-500', lightText: 'text-emerald-400', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-600 to-teal-600', glowFrom: 'bg-emerald-600/20', glowTo: 'bg-teal-600/10', selection: 'selection:bg-emerald-500/30 selection:text-emerald-200' },
+    violet: { primary: 'bg-violet-600', hover: 'hover:bg-violet-500', text: 'text-violet-500', lightText: 'text-violet-400', bgSoft: 'bg-violet-500/10', border: 'border-violet-500/20', shadow: 'shadow-violet-500/20', gradient: 'from-violet-600 to-fuchsia-600', glowFrom: 'bg-violet-600/20', glowTo: 'bg-fuchsia-600/10', selection: 'selection:bg-violet-500/30 selection:text-violet-200' },
+    rose: { primary: 'bg-rose-600', hover: 'hover:bg-rose-500', text: 'text-rose-500', lightText: 'text-rose-400', bgSoft: 'bg-rose-500/10', border: 'border-rose-500/20', shadow: 'shadow-rose-500/20', gradient: 'from-rose-600 to-pink-600', glowFrom: 'bg-rose-600/20', glowTo: 'bg-pink-600/10', selection: 'selection:bg-rose-500/30 selection:text-rose-200' },
+    cyan: { primary: 'bg-cyan-600', hover: 'hover:bg-cyan-500', text: 'text-cyan-500', lightText: 'text-cyan-400', bgSoft: 'bg-cyan-500/10', border: 'border-cyan-500/20', shadow: 'shadow-cyan-500/20', gradient: 'from-cyan-600 to-sky-600', glowFrom: 'bg-cyan-600/20', glowTo: 'bg-sky-600/10', selection: 'selection:bg-cyan-500/30 selection:text-cyan-200' },
+    amber: { primary: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', lightText: 'text-amber-400', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-amber-500/20', gradient: 'from-amber-500 to-yellow-500', glowFrom: 'bg-amber-500/20', glowTo: 'bg-yellow-600/10', selection: 'selection:bg-amber-500/30 selection:text-amber-200' },
+    sky: { primary: 'bg-sky-500', hover: 'hover:bg-sky-400', text: 'text-sky-400', lightText: 'text-sky-300', bgSoft: 'bg-sky-500/10', border: 'border-sky-500/20', shadow: 'shadow-sky-500/20', gradient: 'from-sky-500 to-blue-500', glowFrom: 'bg-sky-500/20', glowTo: 'bg-blue-600/10', selection: 'selection:bg-sky-500/30 selection:text-sky-200' },
+    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-400', lightText: 'text-lime-300', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-lime-500/30 selection:text-lime-200' },
+    slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200' },
+    orange: { primary: 'bg-orange-500', hover: 'hover:bg-orange-400', text: 'text-orange-500', lightText: 'text-orange-400', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', shadow: 'shadow-orange-500/20', gradient: 'from-orange-500 to-red-500', glowFrom: 'bg-orange-500/20', glowTo: 'bg-red-600/10', selection: 'selection:bg-orange-500/30 selection:text-orange-200' },
+    pink: { primary: 'bg-pink-500', hover: 'hover:bg-pink-400', text: 'text-pink-500', lightText: 'text-pink-400', bgSoft: 'bg-pink-500/10', border: 'border-pink-500/20', shadow: 'shadow-pink-500/20', gradient: 'from-pink-500 to-rose-500', glowFrom: 'bg-pink-500/20', glowTo: 'bg-rose-600/10', selection: 'selection:bg-pink-500/30 selection:text-pink-200' },
+    fuchsia: { primary: 'bg-fuchsia-600', hover: 'hover:bg-fuchsia-500', text: 'text-fuchsia-500', lightText: 'text-fuchsia-400', bgSoft: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20', shadow: 'shadow-fuchsia-500/20', gradient: 'from-fuchsia-600 to-purple-600', glowFrom: 'bg-fuchsia-600/20', glowTo: 'bg-purple-600/10', selection: 'selection:bg-fuchsia-500/30 selection:text-fuchsia-200' },
+    teal: { primary: 'bg-teal-500', hover: 'hover:bg-teal-400', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-500 to-emerald-500', glowFrom: 'bg-teal-500/20', glowTo: 'bg-emerald-600/10', selection: 'selection:bg-teal-500/30 selection:text-teal-200' },
 };
 
 const getInvestmentStyle = (type: string) => {
@@ -187,17 +188,24 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
-  const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'indigo');
+  
+  // State Initialization (Try LocalStorage first for instant load)
+  const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('isDarkMode');
     return savedMode !== null ? JSON.parse(savedMode) : true;
   });
-  
-  // Privacy Mode State
   const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
-    const savedMode = localStorage.getItem('isPrivacyMode');
-    return savedMode !== null ? JSON.parse(savedMode) : false;
+    try {
+        const savedMode = localStorage.getItem('finanflow_privacy_mode');
+        return savedMode !== null ? JSON.parse(savedMode) : false;
+    } catch (error) {
+        return false;
+    }
   });
+
+  // Ref to track if initial cloud sync is done to prevent overwriting cloud with stale local state
+  const isCloudSynced = useRef(false);
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -266,20 +274,38 @@ function App() {
                 const userData = userDoc.data() as UserProfile;
                 setUserName(userData.name || user.displayName || 'Investidor');
                 setUserPhoto(userData.photo || null);
+
+                // --- SYNC PREFERENCES FROM CLOUD ---
+                if (userData.preferences) {
+                    isCloudSynced.current = true; // Mark as synced so effects don't overwrite immediately
+                    setCurrentTheme(userData.preferences.theme as ThemeColor || 'lime');
+                    setIsDarkMode(userData.preferences.isDarkMode ?? true);
+                    setIsPrivacyMode(userData.preferences.isPrivacyMode ?? false);
+                    
+                    // Update LocalStorage to match Cloud (Consistency)
+                    localStorage.setItem('appTheme', userData.preferences.theme || 'lime');
+                    localStorage.setItem('isDarkMode', JSON.stringify(userData.preferences.isDarkMode ?? true));
+                    localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode ?? false));
+                } else {
+                    isCloudSynced.current = true; // No cloud prefs, use local
+                }
             } else {
                 setUserName(user.displayName || 'Investidor');
                 const savedPhoto = localStorage.getItem(`user_photo_${user.uid}`);
                 setUserPhoto(savedPhoto);
+                isCloudSynced.current = true;
             }
         } catch (error) {
             console.error("Erro ao buscar perfil:", error);
             setUserName(user.displayName || 'Investidor');
+            isCloudSynced.current = true;
         }
         
       } else {
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
+        isCloudSynced.current = false;
         // Clear data
         setTransactions([]);
         setInstallments([]);
@@ -294,7 +320,37 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // FIRESTORE SYNC EFFECT
+  // --- PERSISTENCE EFFECTS (LOCAL + FIRESTORE) ---
+  
+  // Theme Persistence
+  useEffect(() => {
+      localStorage.setItem('appTheme', currentTheme);
+      if (currentUser && isCloudSynced.current) {
+          const userRef = doc(db, "users", currentUser.uid);
+          setDoc(userRef, { preferences: { theme: currentTheme } }, { merge: true }).catch(err => console.error("Err saving theme", err));
+      }
+  }, [currentTheme, currentUser]);
+
+  // Dark Mode Persistence
+  useEffect(() => {
+      localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
+      if (currentUser && isCloudSynced.current) {
+          const userRef = doc(db, "users", currentUser.uid);
+          setDoc(userRef, { preferences: { isDarkMode } }, { merge: true }).catch(err => console.error("Err saving darkmode", err));
+      }
+  }, [isDarkMode, currentUser]);
+
+  // Privacy Mode Persistence
+  useEffect(() => {
+      localStorage.setItem('finanflow_privacy_mode', JSON.stringify(isPrivacyMode));
+      if (currentUser && isCloudSynced.current) {
+          const userRef = doc(db, "users", currentUser.uid);
+          setDoc(userRef, { preferences: { isPrivacyMode } }, { merge: true }).catch(err => console.error("Err saving privacy", err));
+      }
+  }, [isPrivacyMode, currentUser]);
+
+
+  // FIRESTORE SYNC EFFECT (Data)
   useEffect(() => {
     if (!currentUser) return;
 
@@ -389,19 +445,14 @@ function App() {
       }
   };
 
-  // Local Preferences Persistence
-  useEffect(() => { localStorage.setItem('appTheme', currentTheme); }, [currentTheme]);
-  useEffect(() => { localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode)); }, [isDarkMode]);
-  useEffect(() => { localStorage.setItem('isPrivacyMode', JSON.stringify(isPrivacyMode)); }, [isPrivacyMode]);
-
   // Helper to check privacy mode for display strings
   const getDisplayValue = (val: number, formatter = formatCurrency) => {
       return isPrivacyMode ? '••••••' : formatter(val);
   };
 
-  // Dynamic Theme Base Styles
+  // Dynamic Theme Base Styles (Cards/Interactive Elements)
   const baseTheme = isDarkMode ? {
-    bg: 'bg-slate-950',
+    bg: '', // Removed solid background here to allow gradient
     card: 'bg-slate-900',
     cardHover: 'hover:bg-slate-900/80',
     border: 'border-slate-800',
@@ -414,7 +465,7 @@ function App() {
     tableHeader: 'bg-slate-950',
     tableRowHover: 'hover:bg-slate-800/30'
   } : {
-    bg: 'bg-slate-50',
+    bg: '', // Removed solid background here to allow gradient
     card: 'bg-white',
     cardHover: 'hover:bg-slate-50',
     border: 'border-slate-200',
@@ -832,8 +883,8 @@ function App() {
       return (
           <div className="min-h-screen bg-slate-950 flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-indigo-400 font-medium animate-pulse">Carregando FinanFlow...</p>
+                  <div className="w-16 h-16 border-4 border-lime-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-lime-400 font-medium animate-pulse">Carregando FinanFlow...</p>
               </div>
           </div>
       );
@@ -844,12 +895,29 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen ${baseTheme.bg} ${baseTheme.text} font-sans selection:bg-indigo-500/30 selection:text-indigo-200 pb-24 lg:pb-0 transition-colors duration-300`}>
+    <div className={`min-h-screen ${theme.selection} ${baseTheme.text} font-sans pb-24 lg:pb-0 transition-colors duration-300 relative`}>
       
+      {/* --- DYNAMIC AMBIENT BACKGROUND --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+          {/* Base Layer */}
+          <div className={`absolute inset-0 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`} />
+          
+          {/* Gradient Overlay (Spotlight effect) */}
+          <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] ${isDarkMode ? 'from-slate-900 via-slate-950 to-black' : 'from-white via-slate-50 to-slate-100'} opacity-80`} />
+          
+          {/* Dynamic Theme Orbs */}
+          <div className={`absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-15 transition-all duration-1000 ease-in-out ${theme.primary}`} />
+          <div className={`absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[100px] opacity-10 transition-all duration-1000 ease-in-out ${theme.primary}`} />
+          
+          {/* Texture & Grid */}
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+          <div className={`absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] ${isDarkMode ? 'opacity-20' : 'opacity-30'}`} />
+      </div>
+
       {/* Sidebar Mobile/Desktop */}
       <nav className={`fixed bottom-0 lg:left-0 w-full lg:w-20 lg:h-screen ${baseTheme.nav} border-t lg:border-t-0 lg:border-r ${baseTheme.navBorder} z-50 flex lg:flex-col items-center justify-around lg:justify-start lg:pt-8 gap-1 lg:gap-6 shadow-xl transition-colors duration-300`}>
-        <div className="hidden lg:flex items-center justify-center w-12 h-12 mb-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
-          <Sparkles className="text-white" size={24} />
+        <div className="hidden lg:flex items-center justify-center w-12 h-12 mb-4 bg-gradient-to-br from-lime-400 to-emerald-600 rounded-xl shadow-lg shadow-lime-500/20">
+          <Sparkles className="text-black" size={24} />
         </div>
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: 'Dash' },
@@ -863,7 +931,7 @@ function App() {
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id as any)}
-            className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 ${activeTab === item.id ? `${theme.primary} text-white shadow-lg` : `${baseTheme.textMuted} hover:bg-slate-200/50 dark:hover:bg-slate-800`}`}
+            className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 ${activeTab === item.id ? `${theme.primary} text-black shadow-lg` : `${baseTheme.textMuted} hover:bg-slate-200/50 dark:hover:bg-slate-800`}`}
           >
             <item.icon size={22} />
             <span className="text-[9px] font-medium lg:hidden">{item.label}</span>
@@ -885,7 +953,7 @@ function App() {
         </div>
       </nav>
 
-      <main className="lg:ml-20 min-h-screen relative">
+      <main className="lg:ml-20 min-h-screen relative z-10">
         
         {/* TOP NAVBAR (Clean & Modern) */}
         <header className={`sticky top-0 z-40 ${isDarkMode ? 'bg-slate-950/80' : 'bg-slate-50/80'} backdrop-blur-xl border-b ${baseTheme.navBorder} px-4 py-4 lg:px-8 flex items-center justify-between transition-colors duration-300`}>
@@ -1113,13 +1181,13 @@ function App() {
                             <div className={`relative overflow-hidden rounded-3xl border ${theme.border} p-6 shadow-lg bg-gradient-to-br ${theme.gradient} group cursor-pointer transition-transform hover:scale-[1.02]`}
                                 onClick={handleGenerateReport}
                             >
-                                <div className="relative z-10 text-white">
+                                <div className="relative z-10 text-black">
                                     <div className="flex items-center gap-2 mb-2">
                                         <BrainCircuit size={20} className="animate-pulse" />
                                         <span className="font-bold text-lg">Gemini Advisor</span>
                                     </div>
-                                    <p className="text-white/80 text-sm mb-4 line-clamp-2">Receba insights inteligentes sobre como otimizar seu orçamento este mês.</p>
-                                    <div className="flex items-center text-xs font-bold uppercase tracking-wider bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-md">
+                                    <p className="text-black/80 text-sm mb-4 line-clamp-2">Receba insights inteligentes sobre como otimizar seu orçamento este mês.</p>
+                                    <div className="flex items-center text-xs font-bold uppercase tracking-wider bg-black/10 w-fit px-3 py-1 rounded-full backdrop-blur-md">
                                         Gerar Relatório <Sparkles size={12} className="ml-1" />
                                     </div>
                                 </div>
@@ -1165,7 +1233,7 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Fluxo de Caixa Detalhado</h2>
-                        <button onClick={() => setIsTransModalOpen(true)} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                        <button onClick={() => setIsTransModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                     </div>
                     <div className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl overflow-hidden shadow-lg`}>
                         {currentMonthTransactions.length === 0 ? (
@@ -1222,7 +1290,7 @@ function App() {
                                 <CheckCircle2 size={20} />
                                 <span className="hidden sm:inline">Pagar Mês</span>
                             </button>
-                            <button onClick={() => setIsInstModalOpen(true)} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                            <button onClick={() => setIsInstModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                         </div>
                     </div>
                     
@@ -1327,7 +1395,7 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Metas Financeiras</h2>
-                        <button onClick={() => setIsGoalModalOpen(true)} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                        <button onClick={() => setIsGoalModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {goals.map(goal => {
@@ -1379,7 +1447,7 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Carteira de Investimentos</h2>
-                        <button onClick={() => setIsInvestModalOpen(true)} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                        <button onClick={() => setIsInvestModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -1437,7 +1505,7 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Assinaturas e Fixos</h2>
-                        <button onClick={() => { setEditingSubscription(null); setIsSubModalOpen(true); }} className={`p-3 ${theme.primary} text-white rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
+                        <button onClick={() => { setEditingSubscription(null); setIsSubModalOpen(true); }} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {subscriptions
@@ -1460,7 +1528,7 @@ function App() {
                                 <div className={`pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} flex gap-2 justify-end`}>
                                     <button 
                                         onClick={() => { setEditingSubscription(sub); setIsSubModalOpen(true); }}
-                                        className={`p-2 rounded-lg text-slate-400 hover:text-${currentTheme}-500 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors border ${baseTheme.border}`}
+                                        className={`p-2 rounded-lg text-slate-400 hover:text-black hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors border ${baseTheme.border}`}
                                         title="Editar (cria nova vigência a partir deste mês)"
                                     >
                                         <Pencil size={14} />
@@ -1484,7 +1552,7 @@ function App() {
                 <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="text-center mb-8">
                         <div className={`inline-flex p-4 rounded-2xl ${theme.bgSoft} mb-4 shadow-lg shadow-${currentTheme}-500/10`}>
-                            <Rocket size={32} className={`text-${currentTheme}-500`} />
+                            <Rocket size={32} className="text-black" />
                         </div>
                         <h2 className={`text-3xl font-bold ${baseTheme.textHead} mb-2`}>O que há de novo?</h2>
                         <p className={baseTheme.textMuted}>Acompanhe a evolução do seu gerenciador financeiro.</p>

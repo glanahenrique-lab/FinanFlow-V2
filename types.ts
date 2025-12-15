@@ -1,12 +1,19 @@
 
 export type TransactionType = 'income' | 'expense';
 
+export interface UserPreferences {
+  theme: string;
+  isDarkMode: boolean;
+  isPrivacyMode: boolean;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;
   email: string;
   photo: string | null; // Base64 string or URL
   createdAt?: string;
+  preferences?: UserPreferences;
 }
 
 export interface Transaction {
