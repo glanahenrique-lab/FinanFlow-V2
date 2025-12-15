@@ -37,7 +37,9 @@ import {
   LogOut,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  Zap,
+  Rocket
 } from 'lucide-react';
 import { 
   PieChart,
@@ -88,6 +90,59 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 };
 
+// --- Update Data (Changelog) ---
+const appUpdates = [
+    {
+        version: "2.3.0",
+        date: "Hoje",
+        title: "Modo Privacidade & Melhorias",
+        description: "Mais segurança visual para usar o app em público.",
+        features: [
+            "Novo botão 'Olho' no topo para ocultar/borrar todos os valores monetários.",
+            "Valores sensíveis agora são protegidos por padrão no Modo Privacidade.",
+            "Melhorias visuais nos modais de detalhes."
+        ],
+        icon: EyeOff
+    },
+    {
+        version: "2.2.0",
+        date: "Ontem",
+        title: "Assinaturas Inteligentes",
+        description: "Reformulação completa do gerenciamento de gastos fixos.",
+        features: [
+            "Histórico automático: Assinaturas antigas ficam salvas ao editar valores.",
+            "Remoção do botão manual de pagar: O cálculo agora é automático baseado na vigência.",
+            "Soft Delete: Ao excluir uma assinatura, o histórico passado é preservado."
+        ],
+        icon: Repeat
+    },
+    {
+        version: "2.1.0",
+        date: "Semana Passada",
+        title: "Gestão Avançada de Parcelas",
+        description: "Controle total sobre suas compras parceladas.",
+        features: [
+            "Opção de 'Adiar Parcela' (Pular mês) com cálculo de juros opcional.",
+            "Opção de 'Antecipar Parcelas' com desconto no fluxo futuro.",
+            "Botão 'Pagar Mês' para baixar todas as parcelas do mês atual de uma vez."
+        ],
+        icon: Layers
+    },
+    {
+        version: "2.0.0",
+        date: "Fevereiro 2024",
+        title: "FinanFlow AI & Design System",
+        description: "O maior update visual e funcional até agora.",
+        features: [
+            "Integração com Gemini AI para análise financeira personalizada.",
+            "Novo sistema de Temas (12 cores) e Modo Escuro/Claro robusto.",
+            "Dashboard Bento Grid com widgets interativos.",
+            "Controle de Metas e Investimentos (Renda Fixa, Ações, Cripto)."
+        ],
+        icon: Sparkles
+    }
+];
+
 // --- Theme Configurations ---
 const themes: Record<ThemeColor, { 
     primary: string; 
@@ -131,7 +186,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' >('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'indigo');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('isDarkMode');
@@ -803,6 +858,7 @@ function App() {
           { id: 'subscriptions', icon: Repeat, label: 'Fixos' },
           { id: 'goals', icon: PiggyBank, label: 'Metas' },
           { id: 'investments', icon: TrendingUp, label: 'Invest' },
+          { id: 'updates', icon: Bell, label: 'Novidades' },
         ].map((item) => (
           <button
             key={item.id}
@@ -855,12 +911,14 @@ function App() {
                   </div>
               </div>
 
-              {/* Date Navigation */}
-              <div className={`flex items-center gap-2 ${baseTheme.nav} border ${baseTheme.border} rounded-lg p-1`}>
-                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronLeft size={16}/></button>
-                 <span className={`text-sm font-medium ${baseTheme.text} w-24 text-center capitalize`}>{formatMonth(currentDate)}</span>
-                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronRight size={16}/></button>
-              </div>
+              {/* Date Navigation - Only show if NOT in Updates tab */}
+              {activeTab !== 'updates' && (
+                  <div className={`flex items-center gap-2 ${baseTheme.nav} border ${baseTheme.border} rounded-lg p-1`}>
+                     <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronLeft size={16}/></button>
+                     <span className={`text-sm font-medium ${baseTheme.text} w-24 text-center capitalize`}>{formatMonth(currentDate)}</span>
+                     <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronRight size={16}/></button>
+                  </div>
+              )}
            </div>
 
            <div className="flex items-center gap-3">
@@ -1417,6 +1475,53 @@ function App() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* --- UPDATES TAB --- */}
+            {activeTab === 'updates' && (
+                <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="text-center mb-8">
+                        <div className={`inline-flex p-4 rounded-2xl ${theme.bgSoft} mb-4 shadow-lg shadow-${currentTheme}-500/10`}>
+                            <Rocket size={32} className={`text-${currentTheme}-500`} />
+                        </div>
+                        <h2 className={`text-3xl font-bold ${baseTheme.textHead} mb-2`}>O que há de novo?</h2>
+                        <p className={baseTheme.textMuted}>Acompanhe a evolução do seu gerenciador financeiro.</p>
+                    </div>
+
+                    <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent dark:before:via-slate-700">
+                        {appUpdates.map((update, index) => (
+                            <div key={index} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                {/* Icon Badge */}
+                                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 ${isDarkMode ? 'border-slate-950 bg-slate-900' : 'border-slate-50 bg-white'} shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10`}>
+                                    <update.icon size={16} className={`text-${currentTheme}-500`} />
+                                </div>
+                                
+                                {/* Content Card */}
+                                <div className={`w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] ${baseTheme.card} border ${baseTheme.border} p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl hover:scale-[1.02]`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className={`font-bold ${baseTheme.textHead}`}>{update.version}</span>
+                                        <time className={`font-mono text-xs ${baseTheme.textMuted}`}>{update.date}</time>
+                                    </div>
+                                    <h3 className={`text-lg font-bold mb-2 text-${currentTheme}-500`}>{update.title}</h3>
+                                    <p className={`text-sm ${baseTheme.text} mb-4 leading-relaxed`}>{update.description}</p>
+                                    
+                                    <ul className="space-y-2">
+                                        {update.features.map((feature, i) => (
+                                            <li key={i} className={`flex items-start gap-2 text-xs ${baseTheme.textMuted}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full bg-${currentTheme}-500 mt-1.5 shrink-0`}></div>
+                                                <span>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className={`text-center pt-8 pb-4 text-xs ${baseTheme.textMuted}`}>
+                        <p>FinanFlow AI © {new Date().getFullYear()}</p>
                     </div>
                 </div>
             )}
