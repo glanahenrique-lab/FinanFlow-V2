@@ -7,9 +7,20 @@ interface ConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   isDarkMode?: boolean;
+  confirmText?: string;
+  cancelText?: string;
 }
 
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title, message, onConfirm, onCancel, isDarkMode = true }) => {
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  isDarkMode = true,
+  confirmText = 'Excluir',
+  cancelText = 'Cancelar'
+}) => {
   if (!isOpen) return null;
 
   const styles = isDarkMode ? {
@@ -38,13 +49,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title, messa
             onClick={onCancel}
             className={`flex-1 py-2.5 ${styles.cancelBg} ${styles.cancelText} rounded-lg font-medium transition-colors`}
           >
-            Cancelar
+            {cancelText}
           </button>
           <button 
             onClick={onConfirm}
             className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors shadow-lg shadow-red-900/20"
           >
-            Excluir
+            {confirmText}
           </button>
         </div>
       </div>

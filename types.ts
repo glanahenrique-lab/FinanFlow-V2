@@ -7,6 +7,11 @@ export interface UserProfile {
   email: string;
   photo: string | null; // Base64 string or URL
   createdAt?: string;
+  subscription?: {
+    plan: 'free' | 'pro';
+    status: 'active' | 'inactive';
+    validUntil?: string; // ISO String
+  };
 }
 
 export interface Transaction {

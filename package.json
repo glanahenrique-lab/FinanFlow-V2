@@ -12,6 +12,8 @@
   "dependencies": {
     "@google/genai": "*",
     "firebase": "^10.13.0",
+    "firebase-admin": "^12.0.0",
+    "stripe": "^14.19.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -13,7 +13,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [verificationSentTo, setVerificationSentTo] = useState<string | null>(null);
   const [resetEmailSentTo, setResetEmailSentTo] = useState<string | null>(null);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
 
@@ -70,12 +69,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           const userCredential = await signInWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
           
-          if (!user.emailVerified) {
-             await signOut(auth);
-             setError("E-mail não verificado. Cheque sua caixa de entrada.");
-             return; 
-          }
-
+          // Removido o bloqueio imediato aqui. O App.tsx vai checar o emailVerified.
+          
           try {
              const userDocRef = doc(db, "users", user.uid);
              const userDocSnap = await getDoc(userDocRef);
@@ -125,8 +120,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           if (photo) localStorage.setItem(`user_photo_${user.uid}`, photo);
 
           await sendEmailVerification(user);
-          await signOut(auth);
-          setVerificationSentTo(email);
+          // Não fazemos mais logout automático aqui para permitir que o usuário veja a tela de "Verifique seu email" com opção de reenvio
+          onLoginSuccess();
           
         } catch (err: any) {
            if (err.code === 'auth/email-already-in-use') setError("E-mail já cadastrado.");
@@ -152,7 +147,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   };
 
   const handleBackToLogin = () => {
-    setVerificationSentTo(null);
     setResetEmailSentTo(null);
     setIsForgotPassword(false);
     setIsLogin(true);
@@ -189,20 +183,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
         {/* Form Section */}
         <div className="px-8 pb-10">
-            {verificationSentTo ? (
-                <div className="text-center py-4 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="w-16 h-16 bg-lime-500/20 text-lime-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-lime-500/30">
-                        <Mail size={32} />
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Verifique seu e-mail</h3>
-                    <p className="text-slate-400 text-sm mb-6">
-                        Enviamos um link para <span className="text-lime-400 font-mono">{verificationSentTo}</span>.
-                    </p>
-                    <button onClick={handleBackToLogin} className="w-full py-3 bg-lime-500 hover:bg-lime-400 text-black font-bold rounded-xl transition-all shadow-lg shadow-lime-500/20">
-                        Voltar para Login
-                    </button>
-                </div>
-            ) : resetEmailSentTo ? (
+            {resetEmailSentTo ? (
                 <div className="text-center py-4 animate-in fade-in zoom-in-95 duration-300">
                     <div className="w-16 h-16 bg-lime-500/20 text-lime-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-lime-500/30">
                         <Check size={32} />

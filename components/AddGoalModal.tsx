@@ -41,7 +41,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
       title,
       targetAmount: Number(targetAmount),
       currentAmount: Number(currentAmount),
-      deadline: deadline || undefined,
+      ...(deadline ? { deadline } : {}),
     });
   };
 
