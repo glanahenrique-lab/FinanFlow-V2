@@ -31,8 +31,6 @@ import {
   Eye,
   EyeOff,
   Rocket,
-  Lock,
-  Crown,
   Menu,
   AreaChart as AreaChartIcon,
   LucideIcon
@@ -71,7 +69,6 @@ import { DelayInstallmentModal } from './components/DelayInstallmentModal';
 import { PayAllModal } from './components/PayAllModal';
 import { AnticipateModal } from './components/AnticipateModal';
 import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
-import { PremiumModal } from './components/PremiumModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { getFinancialAdvice } from './services/geminiService';
 import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor } from './utils';
@@ -99,10 +96,9 @@ function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // User Profile & Subscription State
+  // User Profile
   const [userName, setUserName] = useState('Investidor');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState(false);
   const [userCustomCards, setUserCustomCards] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
@@ -145,7 +141,6 @@ function App() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   
   // Edit State
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -188,14 +183,6 @@ function App() {
                     setUserPhoto(userData.photo || null);
                     setUserCustomCards(userData.customCards || []);
                     
-                    // Lógica PRO com Override para glanahenrique@gmail.com
-                    const isAdmin = user.email === 'glanahenrique@gmail.com';
-                    if (isAdmin || (userData.subscription?.plan === 'pro' && userData.subscription?.status === 'active')) {
-                        setIsPro(true);
-                    } else {
-                        setIsPro(false);
-                    }
-                    
                     if (userData.preferences && isInitialLoad.current) {
                         if (userData.preferences.theme) {
                             setCurrentTheme(userData.preferences.theme);
@@ -237,7 +224,6 @@ function App() {
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
-        setIsPro(false);
         setUserCustomCards([]);
         setTransactions([]);
         setInstallments([]);
@@ -365,24 +351,6 @@ function App() {
       } catch (error: any) {
           console.error("Erro ao excluir conta:", error);
           alert("Erro ao excluir conta. Tente novamente.");
-      }
-  };
-
-  const handleUpgradeToPro = async () => {
-      // Esta função é chamada pelo PremiumModal apenas como fallback visual ou em dev.
-      if(!currentUser) return;
-      try {
-          const userRef = doc(db, "users", currentUser.uid);
-          await updateDoc(userRef, {
-              subscription: {
-                  plan: 'pro',
-                  status: 'active',
-                  validUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
-              }
-          });
-      } catch(e) {
-          console.error("Erro ao assinar", e);
-          alert("Erro ao processar assinatura.");
       }
   };
 
@@ -652,7 +620,6 @@ function App() {
   };
 
   const handleGenerateReport = async () => {
-    if (!isPro) { setIsPremiumModalOpen(true); return; }
     setIsReportModalOpen(true);
     setIsAnalyzing(true);
     const report = await getFinancialAdvice(currentMonthTransactions, installments, goals, subscriptions, investments);
@@ -833,7 +800,6 @@ function App() {
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;
           const isDash = item.id === 'dashboard';
-          const isLocked = item.id === 'investments' && !isPro;
           let activeStyle = '';
           if (isActive) {
                activeStyle = isDash ? 'bg-lime-400 text-slate-900 shadow-[0_0_15px_rgba(163,230,53,0.4)] scale-105 z-10' : `${theme.primary} text-black shadow-lg scale-105`;
@@ -845,8 +811,8 @@ function App() {
                }
           }
           return (
-            <button key={item.id} onClick={() => { if (isLocked) { setIsPremiumModalOpen(true); } else { setActiveTab(item.id as any); } }} className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 shrink-0 ${activeStyle}`}>
-              {isLocked ? <Lock size={22} className="text-slate-400" /> : <item.icon size={22} />}
+            <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`p-3 rounded-xl transition-all duration-300 group relative flex flex-col items-center gap-1 shrink-0 ${activeStyle}`}>
+              <item.icon size={22} />
               <span className="text-[9px] font-medium lg:hidden">{item.label}</span>
               {isActive && (<span className={`absolute lg:left-full lg:top-1/2 lg:-translate-y-1/2 lg:ml-4 lg:mb-0 -top-8 mb-2 px-2 py-1 ${isDarkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-800 shadow-md'} text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50`}>{item.label}</span>)}
             </button>
@@ -887,10 +853,9 @@ function App() {
                   <div className={`absolute bottom-full right-0 mb-4 w-48 ${baseTheme.card} border ${baseTheme.border} rounded-2xl shadow-2xl p-2 animate-in slide-in-from-bottom-5 duration-200`}>
                       {mobileMenuItems.map((item) => {
                           const isActive = activeTab === item.id;
-                          const isLocked = item.id === 'investments' && !isPro;
                           return (
-                              <button key={item.id} onClick={() => { if (isLocked) setIsPremiumModalOpen(true); else setActiveTab(item.id as any); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${isActive ? (isDarkMode ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-900') : (isDarkMode ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}`}>
-                                  {isLocked ? <Lock size={18} /> : <item.icon size={18} />}{item.label}
+                              <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${isActive ? (isDarkMode ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-900') : (isDarkMode ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}`}>
+                                  <item.icon size={18} />{item.label}
                               </button>
                           );
                       })}
@@ -912,7 +877,7 @@ function App() {
                   </div>
                   <div className="hidden sm:block">
                      <p className={`text-xs ${baseTheme.textMuted}`}>{getGreeting()},</p>
-                     <p className={`text-sm font-bold ${baseTheme.textHead} flex items-center gap-1`}>{userName} {isPro && <Crown size={12} className="text-yellow-400 fill-yellow-400" />} <ChevronRight size={12} className={baseTheme.textMuted} /></p>
+                     <p className={`text-sm font-bold ${baseTheme.textHead} flex items-center gap-1`}>{userName} <ChevronRight size={12} className={baseTheme.textMuted} /></p>
                   </div>
               </div>
               {activeTab !== 'updates' && (
@@ -930,10 +895,8 @@ function App() {
                    title="Relatório Inteligente"
                >
                    <BrainCircuit size={20} />
-                   {!isPro && <Lock size={10} className="absolute bottom-1 right-1 opacity-70" />}
                </button>
                <button onClick={() => setIsPrivacyMode(!isPrivacyMode)} className={`p-2 rounded-xl transition-all ${isPrivacyMode ? 'bg-slate-800 text-slate-300' : 'text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800'}`} title={isPrivacyMode ? "Mostrar valores" : "Ocultar valores"}>{isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}</button>
-               {!isPro && (<button onClick={() => setIsPremiumModalOpen(true)} className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-xs font-bold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-amber-500/20"><Crown size={14} /> PRO</button>)}
                {activeTab === 'dashboard' && (<><div className={`h-6 w-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-300'} mx-1 hidden sm:block`}></div><button onClick={() => setIsTransModalOpen(true)} className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'bg-white text-slate-900 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'} rounded-lg transition-all font-bold text-sm shadow-lg`}><Plus size={18} /><span className="hidden sm:inline">Transação</span></button></>)}
            </div>
         </header>
@@ -1248,7 +1211,7 @@ function App() {
                         </div>
                         <div className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-6 h-fit`}>
                             <h3 className={`${baseTheme.textHead} font-bold mb-4`}>Resumo</h3>
-                            <div className="space-y-4"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Total Investido</span><span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(investments.reduce((acc, i) => Number(acc) + Number(i.amount), 0))}</span></div><div className={`w-full h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div><div className={`text-xs ${baseTheme.textMuted} leading-relaxed`}>Clique em um investimento para aportar mais ou realizar um resgate.</div></div>
+                            <div className="space-y-4"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Total Investido</span><span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(investments.reduce<number>((acc, i) => acc + Number(i.amount), 0))}</span></div><div className={`w-full h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div><div className={`text-xs ${baseTheme.textMuted} leading-relaxed`}>Clique em um investimento para aportar mais ou realizar um resgate.</div></div>
                         </div>
                     </div>
                 </div>
@@ -1290,7 +1253,6 @@ function App() {
       <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false })} isDarkMode={isDarkMode} />
       
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} currentName={userName} currentPhoto={userPhoto} onSave={handleProfileUpdate} onDeleteAccount={handleDeleteAccount} themeColor={currentTheme} currentTheme={currentTheme} onSelectTheme={setCurrentTheme} onToggleDarkMode={() => setIsDarkMode(prev => !prev)} isDarkMode={isDarkMode} />
-      <PremiumModal isOpen={isPremiumModalOpen} onClose={() => setIsPremiumModalOpen(false)} onUpgrade={handleUpgradeToPro} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <ConfirmModal isOpen={isLogoutConfirmOpen} title="Sair da Conta" message="Você tem certeza que deseja sair do aplicativo?" onConfirm={confirmLogout} onCancel={() => setIsLogoutConfirmOpen(false)} isDarkMode={isDarkMode} confirmText="Sair" cancelText="Ficar" />
 
       <DelayInstallmentModal isOpen={delayModal.isOpen} onClose={() => setDelayModal({ ...delayModal, isOpen: false })} onConfirm={handleDelayInstallment} installmentName={delayModal.installmentName} themeColor={currentTheme} isDarkMode={isDarkMode} />

@@ -1,4 +1,4 @@
-import { Crown, Sparkles, LayoutDashboard, ArrowDownRight, Layers, Repeat, PiggyBank, TrendingUp, Bell, LucideIcon } from 'lucide-react';
+import { Crown, Sparkles, LayoutDashboard, ArrowDownRight, Layers, Repeat, PiggyBank, TrendingUp, Bell, LucideIcon, Zap } from 'lucide-react';
 import { ThemeColor } from './components/ThemeSelectionModal';
 
 export interface AppUpdate {
@@ -12,19 +12,19 @@ export interface AppUpdate {
 
 export const appUpdates: AppUpdate[] = [
     {
-        version: "3.2.0",
+        version: "3.3.0",
         date: "Hoje",
-        title: "Planos & Assinaturas",
-        description: "Lançamento do sistema FinanFlow Pro.",
+        title: "Tudo Liberado! 🚀",
+        description: "O FinanFlow agora é 100% gratuito para todos os usuários.",
         features: [
-            "Plano PRO: Desbloqueie gestão de investimentos e IA ilimitada.",
-            "Visual Premium: Insígnias exclusivas para assinantes.",
-            "Segurança: Controle de acesso aprimorado."
+            "Investimentos Liberados: Gerencie sua carteira sem custos.",
+            "IA Ilimitada: Use o consultor financeiro quantas vezes quiser.",
+            "Sem restrições: Acesso total a todas as ferramentas."
         ],
-        icon: Crown
+        icon: Zap
     },
     {
-        version: "3.1.0",
+        version: "3.2.0",
         date: "Recente",
         title: "Experiência Visual Imersiva",
         description: "Redesign completo dos cards de resumo com efeito 'Glassmorphism', gradientes dinâmicos baseados no tema e animações fluidas.",
