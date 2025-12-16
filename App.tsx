@@ -16,7 +16,6 @@ import {
   Pencil,
   Clock,
   LineChart,
-  Palette,
   PieChart as PieChartIcon,
   Sparkles,
   ArrowUpRight,
@@ -27,23 +26,14 @@ import {
   Layers,
   PiggyBank,
   Repeat,
-  Landmark,
   FastForward,
-  Banknote,
-  ShieldAlert,
-  Building2,
-  Gem,
-  Bell,
   LogOut,
-  Check,
   Eye,
   EyeOff,
-  Zap,
   Rocket,
   Lock,
   Crown,
   Menu,
-  X,
   AreaChart as AreaChartIcon,
   LucideIcon
 } from 'lucide-react';
@@ -62,11 +52,11 @@ import {
   Area
 } from 'recharts';
 import { onAuthStateChanged, signOut, updateProfile, deleteUser, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { auth, db } from './services/firebase';
 import { AuthPage } from './components/AuthPage';
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment, GoalTransaction, InvestmentTransaction, UserProfile } from './types';
-import { SummaryCard, SummaryVariant } from './components/SummaryCard';
+import { SummaryCard } from './components/SummaryCard';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { AddInstallmentModal } from './components/AddInstallmentModal';
 import { AddGoalModal } from './components/AddGoalModal';
@@ -84,23 +74,9 @@ import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { PremiumModal } from './components/PremiumModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { getFinancialAdvice } from './services/geminiService';
+import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor } from './utils';
+import { themes, appUpdates, NAV_ITEMS } from './constants';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
-
-const formatMonth = (date: Date) => {
-  return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(date);
-};
-
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-};
-
-// --- Custom Tooltip Component for Charts ---
 const CustomChartTooltip = ({ active, payload, label, isDarkMode, isPrivacyMode }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0];
@@ -119,122 +95,6 @@ const CustomChartTooltip = ({ active, payload, label, isDarkMode, isPrivacyMode 
   return null;
 };
 
-// --- Update Data (Changelog) ---
-interface AppUpdate {
-    version: string;
-    date: string;
-    title: string;
-    description: string;
-    features: string[];
-    icon: LucideIcon;
-}
-
-const appUpdates: AppUpdate[] = [
-    {
-        version: "3.2.0",
-        date: "Hoje",
-        title: "Planos & Assinaturas",
-        description: "Lançamento do sistema FinanFlow Pro.",
-        features: [
-            "Plano PRO: Desbloqueie gestão de investimentos e IA ilimitada.",
-            "Visual Premium: Insígnias exclusivas para assinantes.",
-            "Segurança: Controle de acesso aprimorado."
-        ],
-        icon: Crown
-    },
-    {
-        version: "3.1.0",
-        date: "Recente",
-        title: "Experiência Visual Imersiva",
-        description: "Redesign completo dos cards de resumo com efeito 'Glassmorphism', gradientes dinâmicos baseados no tema e animações fluidas.",
-        features: [
-            "Visual Neon & Glass: Nova estética moderna para cards de saldo e relatórios.",
-            "Interatividade Refinada: Cards agora reagem ao toque e brilham com a cor do tema.",
-            "Personalização Profunda: O tema escolhido agora se reflete nos mínimos detalhes da interface."
-        ],
-        icon: Sparkles
-    },
-];
-
-// --- Theme Configurations (LIME DERIVED PALETTE) ---
-const themes: Record<ThemeColor, { 
-    primary: string; 
-    hover: string; 
-    text: string; 
-    lightText: string;
-    bgSoft: string;
-    border: string;
-    shadow: string;
-    gradient: string;
-    glowFrom: string;
-    glowTo: string;
-    selection: string;
-    stroke: string;
-}> = {
-    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-500', lightText: 'text-lime-400', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-lime-500/30 selection:text-lime-200', stroke: '#84cc16' },
-    emerald: { primary: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-500', lightText: 'text-emerald-400', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-600 to-teal-600', glowFrom: 'bg-emerald-600/20', glowTo: 'bg-teal-600/10', selection: 'selection:bg-emerald-500/30 selection:text-emerald-200', stroke: '#059669' },
-    green: { primary: 'bg-green-600', hover: 'hover:bg-green-500', text: 'text-green-500', lightText: 'text-green-400', bgSoft: 'bg-green-500/10', border: 'border-green-500/20', shadow: 'shadow-green-500/20', gradient: 'from-green-600 to-emerald-600', glowFrom: 'bg-green-600/20', glowTo: 'bg-emerald-600/10', selection: 'selection:bg-green-500/30 selection:text-green-200', stroke: '#16a34a' },
-    teal: { primary: 'bg-teal-400', hover: 'hover:bg-teal-300', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-400 to-cyan-500', glowFrom: 'bg-teal-500/20', glowTo: 'to-teal-500/5', selection: 'selection:bg-teal-500/30 selection:text-teal-200', stroke: '#2dd4bf' },
-    cyan: { primary: 'bg-cyan-500', hover: 'hover:bg-cyan-400', text: 'text-cyan-500', lightText: 'text-cyan-400', bgSoft: 'bg-cyan-500/10', border: 'border-cyan-500/20', shadow: 'shadow-cyan-500/20', gradient: 'from-cyan-500 to-sky-500', glowFrom: 'bg-cyan-500/20', glowTo: 'bg-sky-600/10', selection: 'selection:bg-cyan-500/30 selection:text-cyan-200', stroke: '#06b6d4' },
-    yellow: { primary: 'bg-yellow-400', hover: 'hover:bg-yellow-300', text: 'text-yellow-400', lightText: 'text-yellow-300', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', shadow: 'shadow-yellow-500/20', gradient: 'from-yellow-400 to-orange-500', glowFrom: 'bg-yellow-500/20', glowTo: 'to-yellow-500/5', selection: 'selection:bg-yellow-500/30 selection:text-yellow-200', stroke: '#facc15' },
-    amber: { primary: 'bg-amber-500', hover: 'hover:bg-amber-400', text: 'text-amber-500', lightText: 'text-amber-400', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-amber-500/20', gradient: 'from-amber-500 to-orange-500', glowFrom: 'bg-amber-500/20', glowTo: 'bg-orange-600/10', selection: 'selection:bg-amber-500/30 selection:text-amber-200', stroke: '#f59e0b' },
-    slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200', stroke: '#64748b' },
-};
-
-// --- Category Colors Helper ---
-const getCategoryStyle = (category: string) => {
-    const cat = category || 'Outros';
-    const styles: Record<string, string> = {
-        'Salário': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        'Investimento': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-        'Renda Extra': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-        'Alimentação': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-        'Moradia': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-        'Saúde': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-        'Transporte': 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-        'Educação': 'bg-sky-500/10 text-sky-500 border-sky-500/20',
-        'Lazer': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-        'Serviços': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        'Compras': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-        'Investimentos': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-        'Metas': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-        'Outros': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
-    };
-    return styles[cat] || styles['Outros'];
-};
-
-const getInvestmentStyle = (type: string) => {
-    switch (type) {
-        case 'Renda Fixa (CDB, Tesouro)': return { icon: Landmark, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' };
-        case 'Ações (Bolsa)': return { icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', badge: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
-        case 'FIIs (Fundos Imobiliários)': return { icon: Building2, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', badge: 'bg-orange-500/10 text-orange-500 border-orange-500/20' };
-        case 'Criptomoedas': return { icon: Banknote, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
-        case 'Reserva de Emergência': return { icon: ShieldAlert, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
-        default: return { icon: Gem, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20', badge: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
-    }
-};
-
-const getInvestmentColor = (type: string) => {
-    switch (type) {
-        case 'Renda Fixa (CDB, Tesouro)': return '#facc15'; // Yellow-400
-        case 'Ações (Bolsa)': return '#60a5fa'; // Blue-400
-        case 'FIIs (Fundos Imobiliários)': return '#fb923c'; // Orange-400
-        case 'Criptomoedas': return '#c084fc'; // Purple-400
-        case 'Reserva de Emergência': return '#34d399'; // Emerald-400
-        default: return '#94a3b8'; // Slate-400
-    }
-};
-
-const NAV_ITEMS = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dash' },
-  { id: 'transactions', icon: ArrowDownRight, label: 'Fluxo' },
-  { id: 'installments', icon: Layers, label: 'Parcelas' },
-  { id: 'subscriptions', icon: Repeat, label: 'Fixos' },
-  { id: 'goals', icon: PiggyBank, label: 'Metas' },
-  { id: 'investments', icon: TrendingUp, label: 'Invest' },
-  { id: 'updates', icon: Bell, label: 'Novidades' },
-];
-
 function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -243,6 +103,7 @@ function App() {
   const [userName, setUserName] = useState('Investidor');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [userCustomCards, setUserCustomCards] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -310,64 +171,74 @@ function App() {
 
   // --- AUTH EFFECT & DATA SYNC ---
   useEffect(() => {
+    let userUnsub: (() => void) | undefined;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Removido osignOut automático aqui para permitir acesso à VerifyEmailPage
         setCurrentUser(user);
         
         try {
             const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
             
-            if (userDoc.exists()) {
-                const userData = userDoc.data() as UserProfile & { preferences?: any };
-                setUserName(userData.name || user.displayName || 'Investidor');
-                setUserPhoto(userData.photo || null);
-                
-                if (userData.subscription?.plan === 'pro' && userData.subscription?.status === 'active') {
-                    setIsPro(true);
+            // Usando onSnapshot para ouvir mudanças em tempo real no perfil
+            userUnsub = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const userData = docSnap.data() as UserProfile & { preferences?: any };
+                    setUserName(userData.name || user.displayName || 'Investidor');
+                    setUserPhoto(userData.photo || null);
+                    setUserCustomCards(userData.customCards || []);
+                    
+                    // Lógica PRO com Override para glanahenrique@gmail.com
+                    const isAdmin = user.email === 'glanahenrique@gmail.com';
+                    if (isAdmin || (userData.subscription?.plan === 'pro' && userData.subscription?.status === 'active')) {
+                        setIsPro(true);
+                    } else {
+                        setIsPro(false);
+                    }
+                    
+                    if (userData.preferences && isInitialLoad.current) {
+                        if (userData.preferences.theme) {
+                            setCurrentTheme(userData.preferences.theme);
+                            localStorage.setItem('appTheme', userData.preferences.theme);
+                        }
+                        if (userData.preferences.isDarkMode !== undefined) {
+                            setIsDarkMode(userData.preferences.isDarkMode);
+                            localStorage.setItem('isDarkMode', JSON.stringify(userData.preferences.isDarkMode));
+                        }
+                        if (userData.preferences.isPrivacyMode !== undefined) {
+                            setIsPrivacyMode(userData.preferences.isPrivacyMode);
+                            localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode));
+                        }
+                    }
                 } else {
-                    setIsPro(false);
+                    // Create if not exists
+                    setDoc(userDocRef, {
+                        uid: user.uid,
+                        name: user.displayName || 'Investidor',
+                        email: user.email,
+                        preferences: {
+                            theme: currentTheme,
+                            isDarkMode: isDarkMode,
+                            isPrivacyMode: isPrivacyMode
+                        },
+                        customCards: []
+                    }, { merge: true });
                 }
-                
-                if (userData.preferences) {
-                    if (userData.preferences.theme) {
-                        setCurrentTheme(userData.preferences.theme);
-                        localStorage.setItem('appTheme', userData.preferences.theme);
-                    }
-                    if (userData.preferences.isDarkMode !== undefined) {
-                        setIsDarkMode(userData.preferences.isDarkMode);
-                        localStorage.setItem('isDarkMode', JSON.stringify(userData.preferences.isDarkMode));
-                    }
-                    if (userData.preferences.isPrivacyMode !== undefined) {
-                        setIsPrivacyMode(userData.preferences.isPrivacyMode);
-                        localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode));
-                    }
-                }
-            } else {
-                setUserName(user.displayName || 'Investidor');
-                await setDoc(userDocRef, {
-                    uid: user.uid,
-                    name: user.displayName || 'Investidor',
-                    email: user.email,
-                    preferences: {
-                        theme: currentTheme,
-                        isDarkMode: isDarkMode,
-                        isPrivacyMode: isPrivacyMode
-                    }
-                }, { merge: true });
-            }
+                isInitialLoad.current = false;
+            });
+
         } catch (error) {
-            console.error("Erro ao buscar perfil:", error);
-        } finally {
-            setTimeout(() => { isInitialLoad.current = false; }, 1000);
+            console.error("Erro ao configurar listener do perfil:", error);
+            isInitialLoad.current = false;
         }
         
       } else {
+        if (userUnsub) userUnsub();
         setCurrentUser(null);
         setUserName('Investidor');
         setUserPhoto(null);
         setIsPro(false);
+        setUserCustomCards([]);
         setTransactions([]);
         setInstallments([]);
         setGoals([]);
@@ -379,7 +250,10 @@ function App() {
       }
       setIsAuthLoading(false);
     });
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        if (userUnsub) userUnsub();
+    };
   }, []);
 
   // --- SAVE PREFERENCES ---
@@ -495,6 +369,7 @@ function App() {
   };
 
   const handleUpgradeToPro = async () => {
+      // Esta função é chamada pelo PremiumModal apenas como fallback visual ou em dev.
       if(!currentUser) return;
       try {
           const userRef = doc(db, "users", currentUser.uid);
@@ -505,7 +380,6 @@ function App() {
                   validUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
               }
           });
-          setIsPro(true);
       } catch(e) {
           console.error("Erro ao assinar", e);
           alert("Erro ao processar assinatura.");
@@ -592,7 +466,6 @@ function App() {
     return { isVisible: isScheduled, isDelayed };
   };
 
-  // Calculations
   const currentMonthTransactions = transactions.filter(t => {
     const tDate = new Date(t.date);
     return tDate.getMonth() === currentDate.getMonth() && tDate.getFullYear() === currentDate.getFullYear();
@@ -603,8 +476,8 @@ function App() {
       return itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
   });
 
-  const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc: number, it) => acc + it.amount, 0);
-  const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc: number, it) => acc + it.amount, 0);
+  const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc, it) => acc + Number(it.amount), 0);
+  const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc, it) => acc + Number(it.amount), 0);
 
   const currentMonthGoalDeposits = goalTransactions.filter(gt => {
     const gtDate = new Date(gt.date);
@@ -613,18 +486,18 @@ function App() {
 
   const totalVariableIncome = currentMonthTransactions
       .filter(t => t.type === 'income' && t.category !== 'Metas' && t.category !== 'Investimentos')
-      .reduce((acc: number, t) => acc + t.amount, 0);
+      .reduce((acc, t) => acc + Number(t.amount), 0);
 
   const totalGoalWithdrawalsVal = goalTransactions.filter(gt => {
       const gtDate = new Date(gt.date);
       return gt.type === 'withdraw' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
-  }).reduce((acc: number, t) => acc + t.amount, 0);
+  }).reduce((acc, t) => acc + Number(t.amount), 0);
   
   const totalMonthlyIncome = totalVariableIncome + totalGoalWithdrawalsVal + totalInvSells;
 
   const totalVariableExpense = currentMonthTransactions
       .filter(t => t.type === 'expense' && t.category !== 'Metas' && t.category !== 'Investimentos')
-      .reduce((acc: number, t) => acc + t.amount, 0);
+      .reduce((acc, t) => acc + Number(t.amount), 0);
   
   const currentMonthSubscriptions = subscriptions.filter(sub => {
       const subStart = new Date(sub.createdAt || '2000-01-01');
@@ -634,29 +507,30 @@ function App() {
       return subStart <= monthEnd && (!subEnd || subEnd >= monthStart);
   });
 
-  const totalFixedExpense = currentMonthSubscriptions.reduce((acc: number, s) => acc + s.amount, 0);
+  const totalFixedExpense = currentMonthSubscriptions.reduce((acc, s) => acc + Number(s.amount), 0);
   
   const currentMonthInstallments = installments.map(inst => {
       const status = getInstallmentStatusForDate(inst, currentDate);
       return { ...inst, ...status };
   }).filter(inst => inst.isVisible);
 
-  const totalInstallmentsCost = currentMonthInstallments.reduce((acc: number, i: any) => {
-    if (i.paidInstallments >= i.totalInstallments) {
+  const totalInstallmentsCost = currentMonthInstallments.reduce((acc, i) => {
+    const inst = i as any;
+    if (inst.paidInstallments >= inst.totalInstallments) {
         return acc; 
     }
-    if (i.isDelayed) {
+    if (inst.isDelayed) {
         return acc;
     }
-    const baseAmount = Number(i.totalAmount) / Number(i.totalInstallments);
-    const interest = Number(i.accumulatedInterest || 0);
-    return Number(acc) + baseAmount + interest;
+    const baseAmount = Number(inst.totalAmount) / Number(inst.totalInstallments);
+    const interest = Number(inst.accumulatedInterest || 0);
+    return acc + baseAmount + interest;
   }, 0);
 
   const totalInvestmentsVal = totalInvBuys;
-  const totalGoalDepositsVal = currentMonthGoalDeposits.reduce((acc: number, i) => acc + i.amount, 0);
+  const totalGoalDepositsVal = currentMonthGoalDeposits.reduce((acc, i) => acc + Number(i.amount), 0);
 
-  const totalMonthlyExpense = Number(totalVariableExpense) + Number(totalFixedExpense) + Number(totalInstallmentsCost) + Number(totalInvestmentsVal) + Number(totalGoalDepositsVal);
+  const totalMonthlyExpense = totalVariableExpense + totalFixedExpense + totalInstallmentsCost + totalInvestmentsVal + totalGoalDepositsVal;
   const balance = totalMonthlyIncome - totalMonthlyExpense;
 
   // Chart Data
@@ -674,8 +548,8 @@ function App() {
     else if (cat === 'Investimentos') value = totalInvestmentsVal;
     else if (cat === 'Metas') value = totalGoalDepositsVal;
     else {
-      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, t) => acc + t.amount, 0);
-      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + s.amount, 0);
+      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, t) => acc + Number(t.amount), 0);
+      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + Number(s.amount), 0);
     }
     return { name: cat, value };
   }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
@@ -687,7 +561,8 @@ function App() {
 
   const allocationData = Object.entries(
     investments.reduce<Record<string, number>>((acc, curr) => {
-        acc[curr.type] = (acc[curr.type] || 0) + curr.amount;
+        const current = acc[curr.type] || 0;
+        acc[curr.type] = current + Number(curr.amount);
         return acc;
     }, {})
   ).map(([name, value]) => ({ 
@@ -702,9 +577,16 @@ function App() {
         const date = new Date(t.date);
         const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         const displayKey = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        if (!acc[sortKey]) acc[sortKey] = { sortKey, name: displayKey, net: 0 };
-        const val = t.type === 'buy' ? t.amount : -t.amount;
-        acc[sortKey].net += val;
+        
+        let item = acc[sortKey];
+        if (!item) {
+            item = { sortKey, name: displayKey, net: 0 };
+            acc[sortKey] = item;
+        }
+        
+        const val = t.type === 'buy' ? Number(t.amount) : -Number(t.amount);
+        item.net += val;
+        
         return acc;
     }, {});
     let runningTotal = 0;
@@ -721,7 +603,8 @@ function App() {
     .reduce((acc: Record<string, number>, t) => {
         const inv = investments.find(i => i.id === t.investmentId);
         const type = inv ? inv.type : 'Outros';
-        acc[type] = (acc[type] || 0) + t.amount;
+        const current = acc[type] || 0;
+        acc[type] = current + Number(t.amount);
         return acc;
     }, {} as Record<string, number>);
 
@@ -750,7 +633,7 @@ function App() {
     if (!selectedGoalId || !currentUser) return;
     const goal = goals.find(g => g.id === selectedGoalId);
     if (!goal) return;
-    const newAmount = type === 'add' ? goal.currentAmount + amount : Math.max(0, goal.currentAmount - amount);
+    const newAmount = type === 'add' ? Number(goal.currentAmount) + Number(amount) : Math.max(0, Number(goal.currentAmount) - Number(amount));
     await saveData('goals', { ...goal, currentAmount: newAmount });
     const goalTransId = generateId();
     await saveData('goal_transactions', { id: goalTransId, goalId: selectedGoalId, amount, date: new Date().toISOString(), type: type === 'add' ? 'deposit' : 'withdraw' });
@@ -761,7 +644,7 @@ function App() {
     if (!selectedInvestmentId || !currentUser) return;
     const invest = investments.find(i => i.id === selectedInvestmentId);
     if (!invest) return;
-    const newAmount = type === 'buy' ? invest.amount + amount : Math.max(0, invest.amount - amount);
+    const newAmount = type === 'buy' ? Number(invest.amount) + Number(amount) : Math.max(0, Number(invest.amount) - Number(amount));
     await saveData('investments', { ...invest, amount: newAmount });
     const invTransId = generateId();
     await saveData('investment_transactions', { id: invTransId, investmentId: selectedInvestmentId, amount, date: new Date().toISOString(), type: type });
@@ -872,6 +755,26 @@ function App() {
       setIsSubModalOpen(false);
   };
 
+  const handleSaveInstallment = async (i: Omit<InstallmentPurchase, 'id'>, saveNewCard?: boolean) => {
+      if (!currentUser) return;
+      const newI = { ...i, id: generateId() };
+      
+      await saveData('installments', newI);
+      
+      if (saveNewCard && i.card) {
+          try {
+              const userRef = doc(db, "users", currentUser.uid);
+              await updateDoc(userRef, {
+                  customCards: arrayUnion(i.card)
+              });
+              setUserCustomCards(prev => [...prev, i.card!]);
+          } catch (e) {
+              console.error("Erro ao salvar novo cartão:", e);
+          }
+      }
+      setIsInstModalOpen(false);
+  };
+
   const theme = themes[currentTheme];
   const getGreeting = () => {
       const hours = new Date().getHours();
@@ -900,8 +803,6 @@ function App() {
       return <AuthPage onLoginSuccess={() => {}} />;
   }
 
-  // --- NEW: VERIFICATION PAGE CHECK ---
-  // Se o usuário estiver autenticado, mas não verificado, mostra a página de verificação
   if (!currentUser.emailVerified) {
       return (
           <VerifyEmailPage 
@@ -1016,9 +917,9 @@ function App() {
               </div>
               {activeTab !== 'updates' && (
                   <div className={`hidden md:flex items-center gap-2 ${baseTheme.nav} border ${baseTheme.border} rounded-lg p-1`}>
-                     <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronLeft size={16}/></button>
+                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronLeft size={16}/></button>
                      <span className={`text-sm font-medium ${baseTheme.text} w-24 text-center capitalize`}>{formatMonth(currentDate)}</span>
-                     <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronRight size={16}/></button>
+                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className={`p-1.5 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-md ${baseTheme.textMuted} hover:${baseTheme.textHead} transition-colors`}><ChevronRight size={16}/></button>
                   </div>
               )}
            </div>
@@ -1053,14 +954,13 @@ function App() {
                     </div>
 
                     <div className="md:hidden flex items-center justify-between bg-slate-800/50 p-2 rounded-xl border border-slate-700/50 mb-4 backdrop-blur-sm">
-                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 text-slate-400 hover:text-white"><ChevronLeft size={20}/></button>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 text-slate-400 hover:text-white"><ChevronLeft size={20}/></button>
                         <span className="text-white font-bold capitalize">{formatMonth(currentDate)}</span>
-                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 text-slate-400 hover:text-white"><ChevronRight size={20}/></button>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-2 text-slate-400 hover:text-white"><ChevronRight size={20}/></button>
                     </div>
 
                     {/* CARDS REORDERED: Receitas > Aportes > Previsão > Despesas > Saldo */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6 mb-6">
-                        {/* 1. Receitas */}
                         <SummaryCard 
                             title="Receitas" 
                             value={totalMonthlyIncome} 
@@ -1077,7 +977,6 @@ function App() {
                                 </div>
                             }
                         />
-                        {/* 2. Aportes */}
                         <SummaryCard 
                             title="Aportes (Mês)" 
                             value={totalInvestmentsVal} 
@@ -1096,7 +995,6 @@ function App() {
                                 </div>
                             }
                         />
-                        {/* 3. Previsão Gastos */}
                         <SummaryCard 
                             title="Previsão Gastos" 
                             value={totalFixedExpense + totalInstallmentsCost} 
@@ -1113,7 +1011,6 @@ function App() {
                                 </div>
                             }
                         />
-                        {/* 4. Despesas */}
                         <SummaryCard 
                             title="Despesas" 
                             value={totalMonthlyExpense} 
@@ -1130,7 +1027,6 @@ function App() {
                                 </div>
                             }
                         />
-                        {/* 5. Saldo Atual */}
                         <SummaryCard 
                             title="Saldo Atual" 
                             value={balance} 
@@ -1251,7 +1147,26 @@ function App() {
                             return (
                                 <div key={inst.id} className={`${baseTheme.card} border ${baseTheme.border} p-6 rounded-2xl shadow-lg ${baseTheme.cardHover} transition-all relative overflow-hidden ${isDelayed ? 'opacity-80 border-amber-900/40' : ''}`}>
                                     <div className={`absolute top-0 left-0 w-1 h-full ${theme.primary}`}></div>
-                                    <div className="flex justify-between items-start mb-4"><div><h3 className={`font-bold ${baseTheme.textHead} text-lg flex items-center gap-2`}>{inst.description}{isDelayed && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/30">Adiado</span>}{isPaidThisMonth && !isFinished && !isDelayed && <span className="text-[10px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Pago</span>}{isFinished && <span className="text-[10px] bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Finalizado</span>}</h3><p className={`${baseTheme.textMuted} text-sm`}>{new Date(inst.purchaseDate).toLocaleDateString('pt-BR')}</p></div><button onClick={() => handleDelete(inst.id, 'Parcelamento')} className={`text-slate-500 hover:text-rose-400`}><Trash2 size={18} /></button></div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className={`font-bold ${baseTheme.textHead} text-lg flex items-center gap-2`}>
+                                                {inst.description}
+                                                {isDelayed && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/30">Adiado</span>}
+                                                {isPaidThisMonth && !isFinished && !isDelayed && <span className="text-[10px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Pago</span>}
+                                                {isFinished && <span className="text-[10px] bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Finalizado</span>}
+                                            </h3>
+                                            <div className="flex flex-col gap-0.5">
+                                                <p className={`${baseTheme.textMuted} text-sm`}>{new Date(inst.purchaseDate).toLocaleDateString('pt-BR')}</p>
+                                                {inst.card && (
+                                                    <div className="flex items-center gap-1.5 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                        <CreditCard size={12} />
+                                                        <span>{inst.card}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => handleDelete(inst.id, 'Parcelamento')} className={`text-slate-500 hover:text-rose-400`}><Trash2 size={18} /></button>
+                                    </div>
                                     <div className="space-y-4"><div className="flex flex-col gap-1"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Parcela Atual</span><span className={`font-semibold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${isDelayed ? 'text-slate-500 line-through' : baseTheme.textHead}`}>{getDisplayValue(currentInstallmentValue)}</span></div>{accumulatedInterest > 0 && !isDelayed && (<div className="flex justify-end items-center gap-1 text-xs text-rose-400 font-medium animate-pulse"><AlertTriangle size={12} />Inclui {getDisplayValue(accumulatedInterest)} de juros</div>)}</div><div className={`w-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-200'} rounded-full h-3 overflow-hidden border ${baseTheme.border}`}><div className={`h-full ${theme.primary} transition-all duration-500`} style={{ width: `${progress}%` }}></div></div><div className={`flex justify-between text-xs ${baseTheme.textMuted} font-mono`}><span>{inst.paidInstallments}/{inst.totalInstallments} Pagas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>Total: {getDisplayValue(inst.totalAmount)}</span></div>{!isFinished && (<div className="flex gap-2 mt-2"><button disabled={isPaidThisMonth || isDelayed} onClick={() => setDelayModal({ isOpen: true, installmentId: inst.id, installmentName: inst.description })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-amber-500/20 text-amber-500 hover:bg-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed`}>Adiar</button>{isPaidThisMonth ? (<button disabled={isDelayed} onClick={() => setAnticipateModal({ isOpen: true, installment: inst })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1`}><FastForward size={12} />Antecipar</button>) : (<button disabled={isDelayed} onClick={() => handlePayInstallment(inst)} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border ${baseTheme.border} hover:bg-slate-200 dark:hover:bg-slate-800 ${baseTheme.text} disabled:opacity-30 disabled:cursor-not-allowed`}>Pagar</button>)}</div>)}</div>
                                 </div>
                             );
@@ -1333,7 +1248,7 @@ function App() {
                         </div>
                         <div className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl p-6 h-fit`}>
                             <h3 className={`${baseTheme.textHead} font-bold mb-4`}>Resumo</h3>
-                            <div className="space-y-4"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Total Investido</span><span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(investments.reduce((acc, i) => acc + i.amount, 0))}</span></div><div className={`w-full h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div><div className={`text-xs ${baseTheme.textMuted} leading-relaxed`}>Clique em um investimento para aportar mais ou realizar um resgate.</div></div>
+                            <div className="space-y-4"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Total Investido</span><span className={`text-emerald-500 font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{getDisplayValue(investments.reduce((acc, i) => Number(acc) + Number(i.amount), 0))}</span></div><div className={`w-full h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div><div className={`text-xs ${baseTheme.textMuted} leading-relaxed`}>Clique em um investimento para aportar mais ou realizar um resgate.</div></div>
                         </div>
                     </div>
                 </div>
@@ -1363,7 +1278,7 @@ function App() {
 
       {/* MODALS */}
       <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={async (t) => { const newT = { ...t, id: generateId() }; await saveData('transactions', newT); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={async (i) => { const newI = { ...i, id: generateId() }; await saveData('installments', newI); setIsInstModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={handleSaveInstallment} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => { setIsSubModalOpen(false); setEditingSubscription(null); }} onSave={handleSaveSubscription} initialData={editingSubscription} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={handleAddInvestment} themeColor={currentTheme} isDarkMode={isDarkMode} />

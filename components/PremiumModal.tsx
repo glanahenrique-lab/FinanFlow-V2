@@ -27,24 +27,49 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     const user = auth.currentUser;
 
     if (!user) {
-        alert("Você precisa estar logado.");
+        alert("Você precisa estar logado para assinar.");
         setIsLoading(false);
         return;
     }
 
     try {
-        // SIMULAÇÃO DE PAGAMENTO (VISUAL ONLY)
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Delay para simular processamento
+        console.log("Iniciando checkout para:", user.email);
         
-        // Chama a função de upgrade do pai (App.tsx) que atualiza o Firestore diretamente
-        onUpgrade();
-        
-        setIsLoading(false);
-        onClose();
+        // Chamada à API para criar a sessão de pagamento do Stripe
+        const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                uid: user.uid,
+                email: user.email
+            }),
+        });
 
-    } catch (error) {
-        console.error("Erro no pagamento:", error);
-        alert("Erro ao iniciar pagamento. Tente novamente.");
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+             console.error("Resposta inválida do servidor:", await response.text());
+             throw new Error("Erro de comunicação com o servidor de pagamento.");
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Erro ao processar pedido.");
+        }
+
+        if (data.url) {
+            console.log("Redirecionando para:", data.url);
+            // Redireciona o usuário para o checkout do Stripe
+            window.location.href = data.url;
+        } else {
+            throw new Error("URL de pagamento não recebida.");
+        }
+
+    } catch (error: any) {
+        console.error("Erro no fluxo de pagamento:", error);
+        alert(`Não foi possível iniciar o pagamento: ${error.message}`);
         setIsLoading(false);
     }
   };
@@ -165,16 +190,16 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     <button 
                         onClick={handleSubscribe}
                         disabled={isLoading}
-                        className="w-full py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-black hover:to-amber-500 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-black hover:to-amber-500 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
-                            <>Processando...</>
+                            <>Aguarde...</>
                         ) : (
                             <>Assinar Agora <Zap size={16} /></>
                         )}
                     </button>
                     <p className="text-[10px] text-center text-slate-500 mt-3">
-                        Simulação: O acesso será liberado imediatamente.
+                        Será redirecionado para o pagamento seguro.
                     </p>
                 </div>
 

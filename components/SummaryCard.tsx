@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export type SummaryVariant = 'income' | 'expense' | 'balance' | 'default' | 'alert' | 'investment';
 
@@ -12,7 +12,8 @@ interface SummaryCardProps {
   details?: React.ReactNode;
   isDarkMode: boolean;
   isPrivacyMode?: boolean;
-  themeColor?: string; // Nova prop para alinhar com o tema
+  themeColor?: string;
+  trend?: number; // Percentual change (e.g. 15.5 for +15.5%)
 }
 
 export const SummaryCard: React.FC<SummaryCardProps> = ({ 
@@ -24,7 +25,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
   details,
   isDarkMode,
   isPrivacyMode = false,
-  themeColor = 'lime'
+  themeColor = 'lime',
+  trend
 }) => {
   // Mapeamento de cores baseado no variant ou no tema global
   const getStyles = () => {
@@ -93,6 +95,13 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
             <div className={style.iconWrapper}>
               <Icon className={`w-6 h-6 ${style.iconColor}`} strokeWidth={2} />
             </div>
+            {/* Trend Indicator */}
+            {trend !== undefined && (
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${trend > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : (trend < 0 ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20')}`}>
+                    {trend > 0 ? <TrendingUp size={12} /> : (trend < 0 ? <TrendingDown size={12} /> : <Minus size={12} />)}
+                    <span>{Math.abs(trend).toFixed(1)}%</span>
+                </div>
+            )}
           </div>
 
           <div>

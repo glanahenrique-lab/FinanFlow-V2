@@ -1,39 +1,31 @@
 import Stripe from 'stripe';
 
-export const config = {
-  runtime: 'edge',
-};
-
-// Inicializa o Stripe com a chave secreta (variável de ambiente)
+// Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16', // Use a versão mais recente disponível no seu dashboard
+  apiVersion: '2023-10-16',
 });
 
-export default async function handler(request: Request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
+export default async function handler(req: any, res: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { uid, email } = await request.json();
+    const { uid, email } = req.body;
 
     if (!uid || !email) {
-      return new Response(JSON.stringify({ error: 'Usuário não identificado' }), { status: 400 });
+      return res.status(400).json({ error: 'Usuário não identificado' });
     }
 
-    // Cria a sessão de checkout
+    // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
             currency: 'brl',
-            product_data: {
-              name: 'FinanFlow PRO',
-              description: 'Acesso a Investimentos, IA Ilimitada e Gráficos Avançados.',
-              images: ['https://finanflow-app.vercel.app/logo-pro.png'], // Substitua por uma URL real da sua logo
-            },
-            unit_amount: 1990, // R$ 19,90 (em centavos)
+            product: 'prod_TbtsDMT5yyospz', // Using the provided Product ID
+            unit_amount: 1990, // R$ 19,90
             recurring: {
               interval: 'month',
             },
@@ -42,23 +34,19 @@ export default async function handler(request: Request) {
         },
       ],
       mode: 'subscription',
-      success_url: `${request.headers.get('origin')}/?success=true`,
-      cancel_url: `${request.headers.get('origin')}/?canceled=true`,
+      success_url: `${req.headers.origin}/?success=true`,
+      cancel_url: `${req.headers.origin}/?canceled=true`,
       customer_email: email,
-      // Metadados são cruciais: é como sabemos QUEM pagou quando o webhook chegar
       metadata: {
         userId: uid, 
       },
       client_reference_id: uid,
     });
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ url: session.url });
 
   } catch (error: any) {
     console.error('Stripe Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 }

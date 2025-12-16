@@ -12,6 +12,7 @@ export interface UserProfile {
     status: 'active' | 'inactive';
     validUntil?: string; // ISO String
   };
+  customCards?: string[]; // Lista de cartões criados pelo usuário
 }
 
 export interface Transaction {
@@ -33,6 +34,7 @@ export interface InstallmentPurchase {
   accumulatedInterest?: number; // Juros acumulados
   lastPaymentDate?: string; // ISO string - Data do último pagamento realizado
   delayedMonths?: string[]; // Array de Strings "MM-YYYY" - Meses que foram pulados/adiados
+  card?: string; // Nome do cartão utilizado
 }
 
 export interface FinancialGoal {
