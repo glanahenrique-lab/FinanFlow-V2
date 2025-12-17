@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, CreditCard } from 'lucide-react';
 import { Subscription } from '../types';
 
 interface AddSubscriptionModalProps {
@@ -9,13 +9,27 @@ interface AddSubscriptionModalProps {
   initialData?: Subscription | null;
   themeColor: string;
   isDarkMode: boolean;
+  userCustomCards?: string[];
 }
 
-export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOpen, onClose, onSave, initialData, themeColor, isDarkMode }) => {
+const DEFAULT_CARDS = ['Dinheiro', 'Sem Cartão', 'Nubank', 'Inter', 'Itaú', 'Bradesco', 'Santander', 'C6 Bank'];
+
+export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialData, 
+  themeColor, 
+  isDarkMode,
+  userCustomCards = []
+}) => {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentDay, setPaymentDay] = useState('');
   const [category, setCategory] = useState('Serviços');
+  const [selectedCard, setSelectedCard] = useState('Sem Cartão');
+
+  const availableCards = Array.from(new Set([...DEFAULT_CARDS, ...userCustomCards]));
 
   useEffect(() => {
     if (isOpen) {
@@ -24,11 +38,13 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
         setAmount(initialData.amount.toString());
         setPaymentDay(initialData.paymentDay.toString());
         setCategory(initialData.category);
+        setSelectedCard(initialData.card || 'Sem Cartão');
       } else {
         setName('');
         setAmount('');
         setPaymentDay('');
         setCategory('Serviços');
+        setSelectedCard('Sem Cartão');
       }
     }
   }, [isOpen, initialData]);
@@ -42,9 +58,8 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
       amount: Number(amount),
       paymentDay: Number(paymentDay),
       category,
+      card: selectedCard
     });
-    // Não limpamos aqui imediatamente para evitar flickers visuais antes de fechar, 
-    // o useEffect cuida do reset ao reabrir.
     onClose();
   };
 
@@ -70,7 +85,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl transition-colors duration-300`}>
+      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl transition-colors duration-300 flex flex-col max-h-[90vh]`}>
         <div className={`flex justify-between items-center p-6 border-b ${styles.border}`}>
           <h2 className={`text-xl font-bold ${styles.textHead}`}>
             {initialData ? 'Editar Assinatura' : 'Nova Assinatura'}
@@ -80,7 +95,7 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
           <div>
             <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Nome da Assinatura</label>
             <input
@@ -135,6 +150,22 @@ export const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({ isOp
               <option>Saúde</option>
               <option>Outros</option>
             </select>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Debitar de qual cartão?</label>
+            <div className="relative">
+                <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
+                <select
+                    value={selectedCard}
+                    onChange={(e) => setSelectedCard(e.target.value)}
+                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+                >
+                    {availableCards.map(card => (
+                        <option key={card} value={card}>{card}</option>
+                    ))}
+                </select>
+            </div>
           </div>
 
           <button

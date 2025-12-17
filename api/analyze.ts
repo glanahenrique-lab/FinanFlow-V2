@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export const config = {
@@ -34,13 +35,16 @@ export default async function handler(request: Request) {
       return new Response(JSON.stringify({ error: 'API_KEY não configurada no servidor' }), { status: 500 });
     }
 
+    // Initialize the Google GenAI client with the API key from environment variables
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+    // FIX: Use gemini-3-flash-preview as recommended for basic text/reasoning tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
+    // Access the extracted string output directly from the .text property
     return new Response(JSON.stringify({ text: response.text }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

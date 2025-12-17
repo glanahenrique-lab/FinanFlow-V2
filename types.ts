@@ -1,4 +1,3 @@
-
 export type TransactionType = 'income' | 'expense';
 
 export interface UserProfile {
@@ -81,6 +80,7 @@ export interface Subscription {
   category: string;
   createdAt?: string; // ISO String - Data de criação/início da vigência
   archivedAt?: string | null; // ISO String - Data de cancelamento/edição (fim da vigência)
+  card?: string; // Cartão ou meio de pagamento (Dinheiro, Sem Cartão, Nubank, etc.)
 }
 
 export interface FinancialSummary {
