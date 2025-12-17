@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
@@ -36,7 +37,9 @@ import {
   Menu,
   AreaChart as AreaChartIcon,
   LucideIcon,
-  CreditCard as CreditCardIcon
+  CreditCard as CreditCardIcon,
+  History,
+  MessageSquare
 } from 'lucide-react';
 import { 
   PieChart,
@@ -73,6 +76,7 @@ import { PayAllModal } from './components/PayAllModal';
 import { AnticipateModal } from './components/AnticipateModal';
 import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
+import { FeedbackModal } from './components/FeedbackModal';
 import { getFinancialAdvice } from './services/geminiService';
 import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor } from './utils';
 import { themes, appUpdates, NAV_ITEMS } from './constants';
@@ -103,7 +107,7 @@ function App() {
   const [userName, setUserName] = useState('Investidor');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCustomCards, setUserCustomCards] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' >('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' | 'feedback' >('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
@@ -139,6 +143,7 @@ function App() {
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -348,33 +353,28 @@ function App() {
   const validInvestmentTransactions = investmentTransactions.filter(t => validInvestmentIds.has(t.investmentId));
   const validGoalTransactions = goalTransactions.filter(t => validGoalIds.has(t.goalId));
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalInvSells = validInvestmentTransactions.filter(it => {
       const itDate = new Date(it.date);
       return it.type === 'sell' && itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
   }).reduce<number>((acc, it) => acc + (Number(it.amount) || 0), 0);
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalGoalWithdrawalsVal = validGoalTransactions.filter(gt => {
       const gtDate = new Date(gt.date);
       return gt.type === 'withdraw' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
   }).reduce<number>((acc, t) => acc + (Number(t.amount) || 0), 0);
   
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalVariableIncome = currentMonthTransactions
       .filter(t => t.type === 'income' && t.category !== 'Metas' && t.category !== 'Investimentos')
       .reduce<number>((acc, t) => acc + (Number(t.amount) || 0), 0);
 
   const totalMonthlyIncome = totalVariableIncome + totalGoalWithdrawalsVal + totalInvSells;
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalVariableExpense = currentMonthTransactions
       .filter(t => t.type === 'expense' && t.category !== 'Metas' && t.category !== 'Investimentos')
       .reduce<number>((acc, t) => acc + (Number(t.amount) || 0), 0);
   
   const currentMonthSubscriptions = subscriptions.filter(sub => !sub.archivedAt);
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalFixedExpense = currentMonthSubscriptions.reduce<number>((acc, s) => acc + (Number(s.amount) || 0), 0);
   
   const currentMonthInstallments: InstallmentWithStatus[] = installments.map(inst => {
@@ -431,7 +431,6 @@ function App() {
       };
   });
 
-  // Mapeamento das assinaturas/gastos fixos para aparecerem no fluxo
   const monthlySubscriptionTransactions: Transaction[] = currentMonthSubscriptions.map((sub) => {
       const day = sub.paymentDay;
       const safeDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -443,7 +442,7 @@ function App() {
           category: sub.category || 'Serviços',
           type: 'expense',
           date: safeDate.toISOString(),
-          isInstallment: false, // Tratado como fixo
+          isInstallment: false, 
           installmentInfo: 'FIXO',
           card: sub.card
       };
@@ -455,20 +454,18 @@ function App() {
       ...monthlySubscriptionTransactions
   ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalInvBuys = validInvestmentTransactions.filter(it => {
       const itDate = new Date(it.date);
       return it.type === 'buy' && itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
   }).reduce<number>((acc, it) => acc + (Number(it.amount) || 0), 0);
 
-  // Explicitly typing reduce accumulator to number to avoid arithmetic errors
   const totalGoalDepositsVal = validGoalTransactions.filter(gt => {
     const gtDate = new Date(gt.date);
     return gt.type === 'deposit' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
   }).reduce<number>((acc, i) => acc + (Number(i.amount) || 0), 0);
 
-  const totalMonthlyExpense = totalVariableExpense + totalFixedExpense + totalInstallmentsCost + totalInvBuys + totalGoalDepositsVal;
-  const balance = totalMonthlyIncome - totalMonthlyExpense;
+  const totalMonthlyExpense = Number(totalVariableExpense) + Number(totalFixedExpense) + Number(totalInstallmentsCost) + Number(totalInvBuys) + Number(totalGoalDepositsVal);
+  const balance = Number(totalMonthlyIncome) - Number(totalMonthlyExpense);
 
   const categories = [...new Set([
     ...currentMonthTransactions.filter(t => t.type === 'expense').map(t => t.category),
@@ -484,18 +481,18 @@ function App() {
     else if (cat === 'Investimentos') value = totalInvBuys;
     else if (cat === 'Metas') value = totalGoalDepositsVal;
     else {
-      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce<number>((acc, t) => acc + (Number(t.amount) || 0), 0);
+      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce<number>((acc, s) => acc + (Number(s.amount) || 0), 0);
     }
     return { name: cat, value };
-  }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+  }).filter(d => d.value > 0).sort((a, b) => Number(b.value) - Number(a.value));
 
   const allocationData = Object.entries(
     investments.reduce<Record<string, number>>((acc, curr) => {
         acc[curr.type] = (acc[curr.type] || 0) + (Number(curr.amount) || 0);
         return acc;
     }, {})
-  ).map(([name, value]) => ({ name, value, color: getInvestmentColor(name) })).sort((a,b) => b.value - a.value);
+  ).map(([name, value]) => ({ name, value, color: getInvestmentColor(name) })).sort((a,b) => Number(b.value) - Number(a.value));
 
   const growthData = (() => {
     type MonthlyNetItem = { sortKey: string, name: string, net: number };
@@ -746,7 +743,8 @@ function App() {
               </div>
            </div>
            <div className="flex items-center gap-3">
-               <button onClick={handleGenerateReport} className={`p-2 rounded-xl transition-all ${theme.text} hover:bg-slate-200/50 dark:hover:bg-slate-900`}><BrainCircuit size={20} /></button>
+               <button onClick={() => setIsFeedbackModalOpen(true)} className={`p-2 rounded-xl transition-all ${theme.text} hover:bg-slate-200/50 dark:hover:bg-slate-900`} title="Enviar Feedback"><MessageSquare size={20} /></button>
+               <button onClick={handleGenerateReport} className={`p-2 rounded-xl transition-all ${theme.text} hover:bg-slate-200/50 dark:hover:bg-slate-900`} title="Análise IA"><BrainCircuit size={20} /></button>
                <button onClick={() => setIsPrivacyMode(!isPrivacyMode)} className="p-2 rounded-xl transition-all hover:bg-slate-200/50 dark:hover:bg-slate-800">{isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}</button>
                <button onClick={() => setIsTransModalOpen(true)} className={`${isDarkMode ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} px-4 py-2 rounded-lg font-bold text-sm shadow-lg flex items-center gap-2`}><Plus size={18} /><span className="hidden sm:inline">Transação</span></button>
            </div>
@@ -757,11 +755,61 @@ function App() {
             {activeTab === 'dashboard' && (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
-                        <SummaryCard title="Receitas" value={totalMonthlyIncome} icon={ArrowUpRight} variant="income" formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
-                        <SummaryCard title="Aportes" value={totalInvBuys} icon={TrendingUp} variant="investment" formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
-                        <SummaryCard title="Previsão Gastos" value={totalFixedExpense + totalInstallmentsCost} icon={Calculator} variant="default" formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
-                        <SummaryCard title="Despesas" value={totalMonthlyExpense} icon={ArrowDownRight} variant="expense" formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
-                        <SummaryCard title="Saldo Atual" value={balance} icon={Wallet} variant={balance < 0 ? 'alert' : 'balance'} formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
+                        <SummaryCard 
+                          title="Receitas" 
+                          value={totalMonthlyIncome} 
+                          icon={ArrowUpRight} 
+                          variant="income" 
+                          formatter={formatCurrency} 
+                          isDarkMode={isDarkMode} 
+                          isPrivacyMode={isPrivacyMode} 
+                          themeColor={currentTheme} 
+                          details={<div className="text-[10px] space-y-1"><p className="flex justify-between"><span>💰 Variável:</span> <span className="font-bold">{formatCurrency(totalVariableIncome)}</span></p><p className="flex justify-between"><span>🎯 Resgates Metas:</span> <span className="font-bold">{formatCurrency(totalGoalWithdrawalsVal)}</span></p><p className="flex justify-between"><span>📈 Resgates Invest:</span> <span className="font-bold">{formatCurrency(totalInvSells)}</span></p></div>}
+                        />
+                        <SummaryCard 
+                          title="Aportes" 
+                          value={totalInvBuys} 
+                          icon={TrendingUp} 
+                          variant="investment" 
+                          formatter={formatCurrency} 
+                          isDarkMode={isDarkMode} 
+                          isPrivacyMode={isPrivacyMode} 
+                          themeColor={currentTheme} 
+                          details={<div className="text-[10px] space-y-1"><p className="flex justify-between"><span>💼 Investimentos:</span> <span className="font-bold">{formatCurrency(totalInvBuys)}</span></p><p className="flex justify-between"><span>⭐ Metas (Depósito):</span> <span className="font-bold">{formatCurrency(totalGoalDepositsVal)}</span></p></div>}
+                        />
+                        <SummaryCard 
+                          title="Previsão Gastos" 
+                          value={totalFixedExpense + totalInstallmentsCost} 
+                          icon={Calculator} 
+                          variant="default" 
+                          formatter={formatCurrency} 
+                          isDarkMode={isDarkMode} 
+                          isPrivacyMode={isPrivacyMode} 
+                          themeColor={currentTheme} 
+                          details={<div className="text-[10px] space-y-1"><p className="flex justify-between"><span>🔄 Assinaturas/Fixos:</span> <span className="font-bold">{formatCurrency(totalFixedExpense)}</span></p><p className="flex justify-between"><span>🗓️ Parcelas do Mês:</span> <span className="font-bold">{formatCurrency(totalInstallmentsCost)}</span></p></div>}
+                        />
+                        <SummaryCard 
+                          title="Despesas" 
+                          value={totalMonthlyExpense} 
+                          icon={ArrowDownRight} 
+                          variant="expense" 
+                          formatter={formatCurrency} 
+                          isDarkMode={isDarkMode} 
+                          isPrivacyMode={isPrivacyMode} 
+                          themeColor={currentTheme} 
+                          details={<div className="text-[10px] space-y-1"><p className="flex justify-between"><span>🛒 Variáveis:</span> <span className="font-bold">{formatCurrency(totalVariableExpense)}</span></p><p className="flex justify-between"><span>📑 Fixos/Parc:</span> <span className="font-bold">{formatCurrency(totalFixedExpense + totalInstallmentsCost)}</span></p><p className="flex justify-between"><span>🚀 Invest/Metas:</span> <span className="font-bold">{formatCurrency(totalInvBuys + totalGoalDepositsVal)}</span></p></div>}
+                        />
+                        <SummaryCard 
+                          title="Saldo Atual" 
+                          value={balance} 
+                          icon={Wallet} 
+                          variant={balance < 0 ? 'alert' : 'balance'} 
+                          formatter={formatCurrency} 
+                          isDarkMode={isDarkMode} 
+                          isPrivacyMode={isPrivacyMode} 
+                          themeColor={currentTheme} 
+                          details={<div className="text-[10px] space-y-1"><p className="flex justify-between"><span>📥 Total Entradas:</span> <span className="font-bold text-emerald-500">{formatCurrency(totalMonthlyIncome)}</span></p><p className="flex justify-between"><span>📤 Total Saídas:</span> <span className="font-bold text-rose-500">{formatCurrency(totalMonthlyExpense)}</span></p></div>}
+                        />
                     </div>
 
                     {Object.keys(invoicesByCard).length > 0 && (
@@ -791,39 +839,73 @@ function App() {
                     )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col`}>
-                             <div className="flex justify-between items-start mb-6 z-10">
-                                <div><h3 className={`text-lg font-bold ${baseTheme.textHead} flex items-center gap-2`}><LineChart className={theme.text} size={20} />Fluxo de Caixa</h3><p className={`text-sm ${baseTheme.textMuted}`}>Entradas vs Saídas</p></div>
-                             </div>
-                             <div className="h-[280px] w-full z-10">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={[{ name: 'Entradas', value: totalMonthlyIncome }, { name: 'Saídas', value: totalMonthlyExpense }]} layout="vertical" barSize={32}>
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={70} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11}} axisLine={false} tickLine={false} />
-                                        <Tooltip content={<CustomChartTooltip isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />} />
-                                        <Bar dataKey="value" radius={[0, 12, 12, 0]}>
-                                            <Cell fill="#10b981" /><Cell fill="#f43f5e" />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                             </div>
+                        <div className={`lg:col-span-2 flex flex-col gap-6`}>
+                            {/* Fluxo de Caixa Chart */}
+                            <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col h-full`}>
+                                <div className="flex justify-between items-start mb-6 z-10">
+                                    <div><h3 className={`text-lg font-bold ${baseTheme.textHead} flex items-center gap-2`}><LineChart className={theme.text} size={20} />Fluxo de Caixa</h3><p className={`text-sm ${baseTheme.textMuted}`}>Entradas vs Saídas</p></div>
+                                </div>
+                                <div className="h-[240px] w-full z-10">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={[{ name: 'Entradas', value: totalMonthlyIncome }, { name: 'Saídas', value: totalMonthlyExpense }]} layout="vertical" barSize={32}>
+                                            <XAxis type="number" hide />
+                                            <YAxis dataKey="name" type="category" width={70} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11}} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<CustomChartTooltip isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />} />
+                                            <Bar dataKey="value" radius={[0, 12, 12, 0]}>
+                                                <Cell fill="#10b981" /><Cell fill="#f43f5e" />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
 
-                             {/* Resumo do Fluxo */}
-                             <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4 border-slate-800/50">
-                                <div className="text-center">
-                                    <p className="text-[10px] text-slate-500 uppercase font-bold">Variáveis</p>
-                                    <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalVariableExpense)}</p>
+                                <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4 border-slate-800/50">
+                                    <div className="text-center">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Variáveis</p>
+                                        <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalVariableExpense)}</p>
+                                    </div>
+                                    <div className="text-center border-x border-slate-800/50">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Fixos</p>
+                                        <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalFixedExpense)}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Parcelas</p>
+                                        <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalInstallmentsCost)}</p>
+                                    </div>
                                 </div>
-                                <div className="text-center border-x border-slate-800/50">
-                                    <p className="text-[10px] text-slate-500 uppercase font-bold">Fixos</p>
-                                    <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalFixedExpense)}</p>
+                            </div>
+
+                            {/* Card de Fluxos Recentes (Observação) */}
+                            <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm flex flex-col`}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className={`text-base font-bold ${baseTheme.textHead} flex items-center gap-2`}><History className={theme.text} size={18} /> Fluxos Recentes</h3>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 font-bold uppercase tracking-tighter">Observação</span>
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-[10px] text-slate-500 uppercase font-bold">Parcelas</p>
-                                    <p className={`text-xs font-mono font-bold ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(totalInstallmentsCost)}</p>
+                                <div className="space-y-3">
+                                    {allTransactions.slice(0, 5).map((t, idx) => (
+                                        <div key={t.id || idx} className={`flex items-center justify-between p-3 rounded-2xl ${isDarkMode ? 'bg-slate-950/40' : 'bg-slate-50/50'} border ${baseTheme.border} hover:scale-[1.01] transition-transform`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                    {t.type === 'income' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs font-bold ${baseTheme.textHead} truncate max-w-[120px]`}>{t.description}</p>
+                                                    <p className="text-[9px] text-slate-500">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text} ${isPrivacyMode ? 'blur-sm' : ''}`}>
+                                                    {t.type === 'expense' ? '-' : '+'} {formatCurrency(t.amount)}
+                                                </p>
+                                                <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${getCategoryStyle(t.category)}`}>{t.category}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {allTransactions.length === 0 && <p className="text-center py-6 text-xs text-slate-500 italic">Nenhuma atividade recente.</p>}
                                 </div>
-                             </div>
+                                <button onClick={() => setActiveTab('transactions')} className={`mt-4 text-[10px] font-bold text-center w-full uppercase tracking-widest ${theme.text} hover:opacity-80 transition-opacity`}>Ver tudo</button>
+                            </div>
                         </div>
+
                         <div className={`${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm flex flex-col`}>
                             <h3 className={`text-base font-bold ${baseTheme.textHead} mb-2 flex items-center gap-2`}><PieChartIcon className={theme.text} size={18} />Categorias</h3>
                             <div className="flex-1 min-h-[220px]">
@@ -838,9 +920,44 @@ function App() {
                                     </ResponsiveContainer>
                                 ) : <div className="h-full flex items-center justify-center text-xs text-slate-500">Sem dados</div>}
                             </div>
+
+                            <div className="mt-6 space-y-2">
+                                {pieChartData.slice(0, 4).map((entry, index) => (
+                                    <div key={index} className="flex items-center justify-between text-[10px]">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full" style={{backgroundColor: ['#6366f1', '#ec4899', '#10b981', '#f59e0b'][index % 4]}}></div>
+                                            <span className={baseTheme.textHead}>{entry.name}</span>
+                                        </div>
+                                        <span className={baseTheme.textMuted}>{((Number(entry.value) / Number(totalMonthlyExpense)) * 100).toFixed(0)}%</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* FEEDBACK TAB (VIRTUAL) */}
+            {activeTab === 'feedback' && (
+                <div className="flex flex-col items-center justify-center py-20 animate-fade-in-up">
+                    <div className={`p-8 ${baseTheme.card} border ${baseTheme.border} rounded-3xl max-w-lg text-center space-y-6 shadow-2xl`}>
+                        <div className={`w-24 h-24 bg-${currentTheme}-500/20 text-${currentTheme}-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-${currentTheme}-500/30`}>
+                            <MessageSquare size={48} />
+                        </div>
+                        <h2 className={`text-3xl font-bold ${baseTheme.textHead}`}>Sua Voz é Nossa Guia</h2>
+                        <p className={`${baseTheme.textMuted} leading-relaxed`}>
+                            Queremos construir o FinanFlow junto com você. Envie sugestões, bugs ou apenas diga o que está achando da sua experiência!
+                        </p>
+                        <button 
+                            onClick={() => setIsFeedbackModalOpen(true)}
+                            className={`w-full py-4 bg-${currentTheme}-600 hover:bg-${currentTheme}-500 text-white font-bold rounded-2xl shadow-xl shadow-${currentTheme}-900/20 transition-all flex items-center justify-center gap-3 group`}
+                        >
+                            <MessageSquare size={20} />
+                            Abrir Canal de Feedback
+                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* TRANSACTIONS */}
@@ -993,7 +1110,7 @@ function App() {
                     <div className="flex justify-between items-center"><h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Carteira de Investimentos</h2><button onClick={() => setIsInvestModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button></div>
                     {investments.length > 0 && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                             <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm flex flex-col relative overflow-hidden`}>
+                             <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col relative overflow-hidden`}>
                                  <div className={`absolute top-0 right-0 w-64 h-64 bg-${currentTheme}-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none`}></div>
                                  <div className="flex justify-between items-start mb-6 z-10"><div><h3 className={`text-lg font-bold ${baseTheme.textHead} flex items-center gap-2`}><AreaChartIcon className={theme.text} size={20} />Evolução Patrimonial</h3><p className={`text-sm ${baseTheme.textMuted}`}>Crescimento acumulado dos aportes</p></div></div>
                                  <div className="h-[280px] w-full z-10">
@@ -1069,6 +1186,15 @@ function App() {
       <DelayInstallmentModal isOpen={delayModal.isOpen} onClose={() => setDelayModal({ ...delayModal, isOpen: false })} onConfirm={handleDelayInstallment} installmentName={delayModal.installmentName} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <PayAllModal isOpen={isPayAllModalOpen} onClose={() => setIsPayAllModalOpen(false)} onConfirm={handlePayAllInstallments} installments={installments} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AnticipateModal isOpen={anticipateModal.isOpen} onClose={() => setAnticipateModal({ isOpen: false, installment: null })} onConfirm={handleAnticipateInstallment} installment={anticipateModal.installment} themeColor={currentTheme} isDarkMode={isDarkMode} />
+
+      <FeedbackModal 
+        isOpen={isFeedbackModalOpen} 
+        onClose={() => setIsFeedbackModalOpen(false)} 
+        userEmail={currentUser?.email || ''} 
+        userName={userName}
+        themeColor={currentTheme}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 }
