@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, CreditCard } from 'lucide-react';
 import { Transaction, TransactionType } from '../types';
 
 interface AddTransactionModalProps {
@@ -9,14 +9,29 @@ interface AddTransactionModalProps {
   initialData?: Transaction | null;
   themeColor: string;
   isDarkMode: boolean;
+  userCustomCards?: string[];
 }
 
-export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClose, onSave, initialData, themeColor, isDarkMode }) => {
+const DEFAULT_CARDS = ['Dinheiro', 'Sem Cartão', 'Nubank', 'Inter', 'Itaú', 'Bradesco', 'Santander', 'C6 Bank'];
+
+export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialData, 
+  themeColor, 
+  isDarkMode,
+  userCustomCards = []
+}) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Alimentação');
   const [type, setType] = useState<TransactionType>('expense');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedCard, setSelectedCard] = useState('Dinheiro');
+
+  // Combine default cards with user custom cards
+  const availableCards = Array.from(new Set([...DEFAULT_CARDS, ...userCustomCards]));
 
   useEffect(() => {
     if (isOpen) {
@@ -26,12 +41,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen
         setCategory(initialData.category);
         setType(initialData.type);
         setDate(initialData.date);
+        setSelectedCard(initialData.card || 'Dinheiro');
       } else {
         setDescription('');
         setAmount('');
         setCategory('Alimentação');
         setType('expense');
         setDate(new Date().toISOString().split('T')[0]);
+        setSelectedCard('Dinheiro');
       }
     }
   }, [isOpen, initialData]);
@@ -46,6 +63,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen
       category,
       type,
       date,
+      card: selectedCard
     });
   };
 
@@ -71,7 +89,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transition-colors duration-300`}>
+      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col max-h-[90vh]`}>
         <div className={`flex justify-between items-center p-6 border-b ${styles.border}`}>
           <h2 className={`text-xl font-bold ${styles.textHead}`}>
             {initialData ? 'Editar Movimentação' : 'Nova Movimentação'}
@@ -81,7 +99,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
           <div>
             <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Tipo</label>
             <div className={`flex gap-2 p-1 rounded-lg ${styles.inputBg} border ${styles.inputBorder}`}>
@@ -155,6 +173,22 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen
               <option>Investimento</option>
               <option>Outros</option>
             </select>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Meio de Pagamento / Cartão</label>
+            <div className="relative">
+                <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
+                <select
+                    value={selectedCard}
+                    onChange={(e) => setSelectedCard(e.target.value)}
+                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+                >
+                    {availableCards.map(card => (
+                        <option key={card} value={card}>{card}</option>
+                    ))}
+                </select>
+            </div>
           </div>
 
           <button

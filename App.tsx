@@ -11,6 +11,8 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Calculator,
   ArrowRight,
   Pencil,
@@ -33,7 +35,8 @@ import {
   Rocket,
   Menu,
   AreaChart as AreaChartIcon,
-  LucideIcon
+  LucideIcon,
+  CreditCard as CreditCardIcon
 } from 'lucide-react';
 import { 
   PieChart,
@@ -78,7 +81,7 @@ const CustomChartTooltip = ({ active, payload, label, isDarkMode, isPrivacyMode 
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className={`${isDarkMode ? 'bg-slate-900/90 border-slate-700' : 'bg-white/90 border-slate-200'} backdrop-blur-xl border p-3 rounded-2xl shadow-xl`}>
+      <div className={`${isDarkMode ? 'bg-slate-900/80 border-slate-700/50' : 'bg-white/80 border-slate-200/50'} backdrop-blur-xl border p-3 rounded-2xl shadow-xl`}>
         <div className="flex items-center gap-2 mb-1">
             <div className={`w-2 h-2 rounded-full ${data.name === 'Entradas' ? 'bg-emerald-400' : (data.name === 'Saídas' ? 'bg-rose-400' : 'bg-indigo-400')}`}></div>
             <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{label || data.name}</p>
@@ -91,6 +94,9 @@ const CustomChartTooltip = ({ active, payload, label, isDarkMode, isPrivacyMode 
   }
   return null;
 };
+
+// Define explicit type for installments with status to avoid 'any'
+type InstallmentWithStatus = InstallmentPurchase & { isVisible: boolean; isDelayed: boolean };
 
 function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
@@ -118,6 +124,7 @@ function App() {
         return savedMode !== null ? JSON.parse(savedMode) : false;
     } catch { return false; }
   });
+  const [showCardInvoices, setShowCardInvoices] = useState<boolean>(true);
 
   const isInitialLoad = useRef(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -360,29 +367,29 @@ function App() {
 
   const baseTheme = isDarkMode ? {
     bg: '', 
-    card: 'bg-slate-900',
+    card: 'bg-slate-900/60 backdrop-blur-xl',
     cardHover: 'hover:bg-slate-900/80',
-    border: 'border-slate-800',
+    border: 'border-slate-800/50',
     text: 'text-slate-200',
     textHead: 'text-white',
     textMuted: 'text-slate-500',
-    nav: 'bg-slate-900',
+    nav: 'bg-slate-900/90 backdrop-blur-xl',
     navBorder: 'border-slate-800',
     inputBg: 'bg-slate-950',
-    tableHeader: 'bg-slate-950',
+    tableHeader: 'bg-slate-950/50',
     tableRowHover: 'hover:bg-slate-800/30'
   } : {
     bg: '', 
-    card: 'bg-white',
-    cardHover: 'hover:bg-slate-50',
-    border: 'border-slate-200',
+    card: 'bg-white/60 backdrop-blur-xl',
+    cardHover: 'hover:bg-white/80',
+    border: 'border-slate-200/60',
     text: 'text-slate-600',
     textHead: 'text-slate-900',
     textMuted: 'text-slate-400',
-    nav: 'bg-white',
+    nav: 'bg-white/90 backdrop-blur-xl',
     navBorder: 'border-slate-200',
     inputBg: 'bg-white',
-    tableHeader: 'bg-slate-50',
+    tableHeader: 'bg-slate-50/50',
     tableRowHover: 'hover:bg-slate-50'
   };
 
@@ -452,8 +459,8 @@ function App() {
       return itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
   });
 
-  const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc, it) => acc + Number(it.amount), 0);
-  const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc, it) => acc + Number(it.amount), 0);
+  const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc: number, it) => acc + Number(it.amount), 0);
+  const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc: number, it) => acc + Number(it.amount), 0);
 
   const currentMonthGoalDeposits = validGoalTransactions.filter(gt => {
     const gtDate = new Date(gt.date);
@@ -462,18 +469,18 @@ function App() {
 
   const totalVariableIncome = currentMonthTransactions
       .filter(t => t.type === 'income' && t.category !== 'Metas' && t.category !== 'Investimentos')
-      .reduce((acc, t) => acc + Number(t.amount), 0);
+      .reduce((acc: number, t) => acc + Number(t.amount), 0);
 
   const totalGoalWithdrawalsVal = validGoalTransactions.filter(gt => {
       const gtDate = new Date(gt.date);
       return gt.type === 'withdraw' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
-  }).reduce((acc, t) => acc + Number(t.amount), 0);
+  }).reduce((acc: number, t) => acc + Number(t.amount), 0);
   
   const totalMonthlyIncome = totalVariableIncome + totalGoalWithdrawalsVal + totalInvSells;
 
   const totalVariableExpense = currentMonthTransactions
       .filter(t => t.type === 'expense' && t.category !== 'Metas' && t.category !== 'Investimentos')
-      .reduce((acc, t) => acc + Number(t.amount), 0);
+      .reduce((acc: number, t) => acc + Number(t.amount), 0);
   
   const currentMonthSubscriptions = subscriptions.filter(sub => {
       const subStart = new Date(sub.createdAt || '2000-01-01');
@@ -483,15 +490,14 @@ function App() {
       return subStart <= monthEnd && (!subEnd || subEnd >= monthStart);
   });
 
-  const totalFixedExpense = currentMonthSubscriptions.reduce((acc, s) => acc + Number(s.amount), 0);
+  const totalFixedExpense = currentMonthSubscriptions.reduce((acc: number, s) => acc + Number(s.amount), 0);
   
-  const currentMonthInstallments = installments.map(inst => {
+  const currentMonthInstallments: InstallmentWithStatus[] = installments.map(inst => {
       const status = getInstallmentStatusForDate(inst, currentDate);
       return { ...inst, ...status };
   }).filter(inst => inst.isVisible);
 
-  const totalInstallmentsCost = currentMonthInstallments.reduce((acc, i) => {
-    const inst = i as any;
+  const totalInstallmentsCost = currentMonthInstallments.reduce((acc: number, inst) => {
     if (inst.paidInstallments >= inst.totalInstallments) {
         return acc; 
     }
@@ -503,8 +509,63 @@ function App() {
     return acc + baseAmount + interest;
   }, 0);
 
+  // --- CALCULAR FATURAS POR CARTÃO ---
+  const invoicesByCard = currentMonthInstallments.reduce<Record<string, number>>((acc, inst) => {
+      if (inst.paidInstallments >= inst.totalInstallments || inst.isDelayed) return acc;
+      
+      const cardName = inst.card || 'Outros';
+      if (['Dinheiro', 'Sem Cartão', 'Débito'].includes(cardName)) return acc;
+
+      const baseAmount = Number(inst.totalAmount) / Number(inst.totalInstallments);
+      const interest = Number(inst.accumulatedInterest || 0);
+      
+      const currentVal = acc[cardName] || 0;
+      acc[cardName] = currentVal + baseAmount + interest;
+      return acc;
+  }, {});
+
+  // Add Transactions with Card info to Invoices
+  currentMonthTransactions.forEach(t => {
+      if (t.type === 'expense' && t.card && !['Dinheiro', 'Sem Cartão', 'Débito'].includes(t.card)) {
+          invoicesByCard[t.card] = (invoicesByCard[t.card] || 0) + Number(t.amount);
+      }
+  });
+
+  // --- INTEGRATE INSTALLMENTS INTO TRANSACTIONS LIST ---
+  // Generate virtual transactions for installments due this month
+  const monthlyInstallmentTransactions: Transaction[] = currentMonthInstallments.map((inst: any) => {
+      const baseAmount = Number(inst.totalAmount) / Number(inst.totalInstallments);
+      const interest = Number(inst.accumulatedInterest || 0);
+      const monthlyVal = baseAmount + interest;
+      
+      // Calculate display date (use today or 1st of month to show up in current view)
+      // We'll use the same day of the month as purchase date, but current month/year
+      const purchDate = new Date(inst.purchaseDate);
+      // Handle day overflow (e.g. 31st in a 30-day month)
+      const day = purchDate.getDate();
+      const safeDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      if (safeDate.getMonth() !== currentDate.getMonth()) {
+          // If overflowed to next month, set to last day of current month
+          safeDate.setDate(0); 
+      }
+
+      return {
+          id: `inst-${inst.id}`, // Virtual ID
+          description: inst.description,
+          amount: monthlyVal,
+          category: 'Parcelas',
+          type: 'expense',
+          date: safeDate.toISOString(),
+          isInstallment: true,
+          installmentInfo: `${Math.min(inst.totalInstallments, inst.paidInstallments + 1)}/${inst.totalInstallments}`,
+          card: inst.card
+      };
+  });
+
+  const allTransactions = [...currentMonthTransactions, ...monthlyInstallmentTransactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   const totalInvestmentsVal = totalInvBuys;
-  const totalGoalDepositsVal = currentMonthGoalDeposits.reduce((acc, i) => acc + Number(i.amount), 0);
+  const totalGoalDepositsVal = currentMonthGoalDeposits.reduce((acc: number, i) => acc + Number(i.amount), 0);
 
   const totalMonthlyExpense = totalVariableExpense + totalFixedExpense + totalInstallmentsCost + totalInvestmentsVal + totalGoalDepositsVal;
   const balance = totalMonthlyIncome - totalMonthlyExpense;
@@ -524,8 +585,8 @@ function App() {
     else if (cat === 'Investimentos') value = totalInvestmentsVal;
     else if (cat === 'Metas') value = totalGoalDepositsVal;
     else {
-      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, t) => acc + Number(t.amount), 0);
-      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc, s) => acc + Number(s.amount), 0);
+      value += currentMonthTransactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc: number, t) => acc + Number(t.amount), 0);
+      value += currentMonthSubscriptions.filter(s => s.category === cat).reduce((acc: number, s) => acc + Number(s.amount), 0);
     }
     return { name: cat, value };
   }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
@@ -562,9 +623,9 @@ function App() {
             acc[sortKey] = item;
         }
         
-        const amount = Number(t.amount);
-        const val = t.type === 'buy' ? amount : -amount;
-        item.net = Number(item.net) + val;
+        const amount: number = Number(t.amount);
+        const val: number = t.type === 'buy' ? amount : (amount * -1);
+        item.net = (Number(item.net) || 0) + val;
         
         return acc;
     }, {});
@@ -582,7 +643,7 @@ function App() {
     .reduce((acc: Record<string, number>, t) => {
         const inv = investments.find(i => i.id === t.investmentId);
         const type = inv ? inv.type : 'Outros';
-        const current = acc[type] || 0;
+        const current = Number(acc[type] || 0);
         acc[type] = current + Number(t.amount);
         return acc;
     }, {} as Record<string, number>);
@@ -641,7 +702,9 @@ function App() {
     if (!selectedInvestmentId || !currentUser) return;
     const invest = investments.find(i => i.id === selectedInvestmentId);
     if (!invest) return;
-    const newAmount = type === 'buy' ? Number(invest.amount) + Number(amount) : Math.max(0, Number(invest.amount) - Number(amount));
+    const currentInvestAmount = Number(invest.amount);
+    const opAmount = Number(amount);
+    const newAmount = type === 'buy' ? currentInvestAmount + opAmount : Math.max(0, currentInvestAmount - opAmount);
     await saveData('investments', { ...invest, amount: newAmount });
     const invTransId = generateId();
     await saveData('investment_transactions', { id: invTransId, investmentId: selectedInvestmentId, amount, date: new Date().toISOString(), type: type });
@@ -662,10 +725,14 @@ function App() {
       if (!inst) return;
       const currentMonthKey = `${currentDate.getMonth()}-${currentDate.getFullYear()}`;
       const currentDelays = inst.delayedMonths || [];
+      const totalAmt = Number(inst.totalAmount);
+      const interestAmt = Number(interestAmount);
+      const accInterest = Number(inst.accumulatedInterest || 0);
+
       const updatedInst = {
           ...inst,
-          totalAmount: Number(inst.totalAmount) + Number(interestAmount),
-          accumulatedInterest: (Number(inst.accumulatedInterest) || 0) + Number(interestAmount),
+          totalAmount: totalAmt + interestAmt,
+          accumulatedInterest: accInterest + interestAmt,
           delayedMonths: [...currentDelays, currentMonthKey]
       };
       await saveData('installments', updatedInst);
@@ -1037,6 +1104,42 @@ function App() {
                         />
                     </div>
 
+                    {/* CREDIT CARD INVOICES SECTION */}
+                    {Object.keys(invoicesByCard).length > 0 && (
+                        <div className="mb-6">
+                            <button 
+                                onClick={() => setShowCardInvoices(!showCardInvoices)} 
+                                className={`w-full flex items-center justify-between text-sm font-bold ${baseTheme.textMuted} uppercase tracking-wider mb-3 group`}
+                            >
+                                <span className="flex items-center gap-2"><CreditCardIcon size={16} /> Faturas dos Cartões (Mês Atual)</span>
+                                <div className={`p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors`}>
+                                    {showCardInvoices ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </div>
+                            </button>
+                            
+                            {showCardInvoices && (
+                                <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar animate-in slide-in-from-top-2 duration-300">
+                                    {Object.entries(invoicesByCard).sort((a,b) => b[1] - a[1]).map(([card, amount]) => (
+                                        <div key={card} className={`min-w-[180px] p-4 rounded-2xl border ${baseTheme.border} ${isDarkMode ? 'bg-slate-900/60' : 'bg-white/80'} backdrop-blur-xl shadow-sm flex flex-col justify-between group hover:border-${currentTheme}-500/50 transition-all`}>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <span className={`text-xs font-bold ${baseTheme.textMuted} uppercase`}>{card}</span>
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'} group-hover:bg-${currentTheme}-500/20 transition-colors`}>
+                                                    <CreditCardIcon size={14} className={`text-${currentTheme}-500`} />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className={`text-xs ${baseTheme.textMuted} mb-0.5`}>Valor da Fatura</p>
+                                                <p className={`text-lg font-bold ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>
+                                                    {formatCurrency(amount)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                         <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col`}>
                              <div className={`absolute top-0 right-0 w-64 h-64 bg-${currentTheme}-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none`}></div>
@@ -1050,14 +1153,14 @@ function App() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={monthlyFlowData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barSize={32}>
                                         <defs>
-                                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#10b981" stopOpacity={0.6}/><stop offset="100%" stopColor="#10b981" stopOpacity={1}/></linearGradient>
-                                            <linearGradient id="expenseGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.6}/><stop offset="100%" stopColor="#f43f5e" stopOpacity={1}/></linearGradient>
+                                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#10b981" stopOpacity={0.6}/><stop offset="100%" stopColor="#10b981" stopOpacity={0.9}/></linearGradient>
+                                            <linearGradient id="expenseGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.6}/><stop offset="100%" stopColor="#f43f5e" stopOpacity={0.9}/></linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#e2e8f0'} horizontal={true} vertical={false} opacity={0.3} />
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" width={70} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 600}} axisLine={false} tickLine={false} />
                                         <Tooltip cursor={{fill: isDarkMode ? '#ffffff0a' : '#00000005', radius: 8}} content={<CustomChartTooltip isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />} />
-                                        <Bar dataKey="value" radius={[0, 12, 12, 0]} animationDuration={1000}>
+                                        <Bar dataKey="value" radius={[0, 12, 12, 0]} animationDuration={1000} fillOpacity={0.8} stroke={isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.5)"} strokeWidth={1}>
                                             {monthlyFlowData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.name === 'Entradas' ? 'url(#incomeGradient)' : 'url(#expenseGradient)'} />))}
                                         </Bar>
                                     </BarChart>
@@ -1070,8 +1173,8 @@ function App() {
                                 {pieChartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={5} cornerRadius={6} dataKey="value" stroke="none">
-                                                {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'][index % 5]} />)}
+                                            <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={5} cornerRadius={6} dataKey="value" stroke={isDarkMode ? "rgba(255,255,255,0.1)" : "#fff"} strokeWidth={2}>
+                                                {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'][index % 5]} fillOpacity={0.9} />)}
                                             </Pie>
                                             <Tooltip content={<CustomChartTooltip isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />} />
                                         </PieChart>
@@ -1088,12 +1191,21 @@ function App() {
                                 <button onClick={() => setActiveTab('transactions')} className={`text-xs text-${currentTheme}-500 hover:underline font-medium`}>Ver tudo</button>
                             </div>
                             <div className="flex-1 space-y-3 overflow-hidden">
-                                {currentMonthTransactions.length === 0 ? (<div className={`h-32 flex items-center justify-center ${baseTheme.textMuted} text-sm bg-slate-100/5 rounded-xl border border-dashed ${baseTheme.border}`}>Nenhuma transação este mês.</div>) : (
-                                    currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(t => (
+                                {allTransactions.length === 0 ? (<div className={`h-32 flex items-center justify-center ${baseTheme.textMuted} text-sm bg-slate-100/5 rounded-xl border border-dashed ${baseTheme.border}`}>Nenhuma transação este mês.</div>) : (
+                                    allTransactions.slice(0, 5).map(t => (
                                         <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl ${isDarkMode ? 'bg-slate-950/50 hover:bg-slate-950' : 'bg-slate-50 hover:bg-slate-100'} border ${baseTheme.border} transition-colors group`}>
                                             <div className="flex items-center gap-3">
                                                 <div className={`p-2 rounded-lg ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{t.type === 'income' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}</div>
-                                                <div><p className={`font-medium ${baseTheme.text} text-sm`}>{t.description}</p><p className={`text-[10px] ${baseTheme.textMuted}`}>{new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}</p></div>
+                                                <div>
+                                                    <p className={`font-medium ${baseTheme.text} text-sm flex items-center gap-2`}>
+                                                        {t.description}
+                                                        {t.isInstallment && <span className="text-[9px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-1.5 py-0.5 rounded font-mono">{t.installmentInfo}</span>}
+                                                    </p>
+                                                    <p className={`text-[10px] ${baseTheme.textMuted} flex items-center gap-1`}>
+                                                        {new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}
+                                                        {t.card && <>• <span className="uppercase font-bold tracking-wider">{t.card}</span></>}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div className="flex flex-col items-end gap-1"><span className={`text-sm font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>{getDisplayValue(t.amount)}</span><span className={`text-[9px] px-1.5 py-0.5 rounded ${getCategoryStyle(t.category)} bg-opacity-50`}>{t.category}</span></div>
                                         </div>
@@ -1116,8 +1228,16 @@ function App() {
                 <div className="space-y-6">
                     <div className="flex justify-between items-center"><h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Fluxo de Caixa Detalhado</h2><button onClick={() => setIsTransModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button></div>
                     <div className={`${baseTheme.card} border ${baseTheme.border} rounded-2xl overflow-hidden shadow-lg`}>
-                        {currentMonthTransactions.length === 0 ? (<div className={`p-12 text-center ${baseTheme.textMuted}`}>Nenhuma transação encontrada neste mês.</div>) : (
-                            <div className="overflow-x-auto"><table className="w-full text-left"><thead className={`${baseTheme.tableHeader} ${baseTheme.textMuted} text-xs uppercase tracking-wider`}><tr><th className="p-4 font-semibold">Data</th><th className="p-4 font-semibold">Descrição</th><th className="p-4 font-semibold">Categoria</th><th className="p-4 font-semibold text-right">Valor</th><th className="p-4 font-semibold text-center">Ações</th></tr></thead><tbody className={`divide-y ${baseTheme.border}`}>{currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (<tr key={t.id} className={`${baseTheme.tableRowHover} transition-colors`}><td className={`p-4 ${baseTheme.textMuted} font-mono text-sm`}>{new Date(t.date).toLocaleDateString('pt-BR')}</td><td className={`p-4 font-medium ${baseTheme.textHead}`}>{t.description}</td><td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getCategoryStyle(t.category)}`}>{t.category}</span></td><td className={`p-4 text-right font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>{t.type === 'expense' && '- '}{getDisplayValue(t.amount)}</td><td className="p-4 flex justify-center gap-2"><button onClick={() => handleDelete(t.id, 'Movimentação')} className={`p-2 ${baseTheme.textMuted} hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors`}><Trash2 size={16} /></button></td></tr>))}</tbody></table></div>
+                        {allTransactions.length === 0 ? (<div className={`p-12 text-center ${baseTheme.textMuted}`}>Nenhuma transação encontrada neste mês.</div>) : (
+                            <div className="overflow-x-auto"><table className="w-full text-left"><thead className={`${baseTheme.tableHeader} ${baseTheme.textMuted} text-xs uppercase tracking-wider`}><tr><th className="p-4 font-semibold">Data</th><th className="p-4 font-semibold">Descrição</th><th className="p-4 font-semibold">Categoria</th><th className="p-4 font-semibold text-right">Valor</th><th className="p-4 font-semibold text-center">Ações</th></tr></thead><tbody className={`divide-y ${baseTheme.border}`}>{allTransactions.map(t => (<tr key={t.id} className={`${baseTheme.tableRowHover} transition-colors`}><td className={`p-4 ${baseTheme.textMuted} font-mono text-sm`}>{new Date(t.date).toLocaleDateString('pt-BR')}</td><td className={`p-4 font-medium ${baseTheme.textHead}`}>
+                                {t.description}
+                                {t.isInstallment && <span className="ml-2 text-[10px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-1.5 py-0.5 rounded font-mono">{t.installmentInfo}</span>}
+                                {t.card && <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1"><CreditCardIcon size={10}/>{t.card}</div>}
+                            </td><td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getCategoryStyle(t.category)}`}>{t.category}</span></td><td className={`p-4 text-right font-bold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${t.type === 'income' ? 'text-emerald-500' : baseTheme.text}`}>{t.type === 'expense' && '- '}{getDisplayValue(t.amount)}</td><td className="p-4 flex justify-center gap-2">
+                                {!t.isInstallment && (
+                                    <button onClick={() => handleDelete(t.id, 'Movimentação')} className={`p-2 ${baseTheme.textMuted} hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors`}><Trash2 size={16} /></button>
+                                )}
+                            </td></tr>))}</tbody></table></div>
                         )}
                     </div>
                 </div>
@@ -1127,12 +1247,12 @@ function App() {
             {activeTab === 'installments' && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center"><h2 className={`text-2xl font-bold ${baseTheme.textHead}`}>Compras Parceladas</h2><div className="flex gap-2"><button onClick={() => setIsPayAllModalOpen(true)} className={`flex items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg transition-all font-bold`}><CheckCircle2 size={20} /><span className="hidden sm:inline">Pagar Mês</span></button><button onClick={() => setIsInstModalOpen(true)} className={`p-3 ${theme.primary} text-black rounded-xl shadow-lg hover:opacity-90 transition-all`}><Plus size={20} /></button></div></div>
-                    {currentMonthInstallments.length === 0 ? (<div className={`text-center ${baseTheme.textMuted} py-12 ${baseTheme.card} border ${baseTheme.border} rounded-2xl`}><Layers size={48} className="mx-auto mb-4 opacity-50" /><p>Nenhuma parcela agendada para este mês.</p></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{currentMonthInstallments.map(inst => {
+                    {currentMonthInstallments.length === 0 ? (<div className={`text-center ${baseTheme.textMuted} py-12 ${baseTheme.card} border ${baseTheme.border} rounded-2xl`}><Layers size={48} className="mx-auto mb-4 opacity-50" /><p>Nenhuma parcela agendada para este mês.</p></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{currentMonthInstallments.map((inst) => {
                             const baseInstallment = Number(inst.totalAmount) / Number(inst.totalInstallments);
                             const accumulatedInterest = Number(inst.accumulatedInterest || 0);
                             const isDelayed = inst.isDelayed; 
                             const currentInstallmentValue = baseInstallment + accumulatedInterest;
-                            const progress = (inst.paidInstallments / inst.totalInstallments) * 100;
+                            const progress = (Number(inst.paidInstallments) / Number(inst.totalInstallments)) * 100;
                             const lastPayDate = inst.lastPaymentDate ? new Date(inst.lastPaymentDate) : null;
                             const isPaidThisMonth = lastPayDate && lastPayDate.getMonth() === currentDate.getMonth() && lastPayDate.getFullYear() === currentDate.getFullYear();
                             const isFinished = inst.paidInstallments >= inst.totalInstallments;
@@ -1151,7 +1271,7 @@ function App() {
                                                 <p className={`${baseTheme.textMuted} text-sm`}>{new Date(inst.purchaseDate).toLocaleDateString('pt-BR')}</p>
                                                 {inst.card && (
                                                     <div className="flex items-center gap-1.5 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                        <CreditCard size={12} />
+                                                        <CreditCardIcon size={12} />
                                                         <span>{inst.card}</span>
                                                     </div>
                                                 )}
@@ -1159,7 +1279,7 @@ function App() {
                                         </div>
                                         <button onClick={() => handleDelete(inst.id, 'Parcelamento')} className={`text-slate-500 hover:text-rose-400`}><Trash2 size={18} /></button>
                                     </div>
-                                    <div className="space-y-4"><div className="flex flex-col gap-1"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Parcela Atual</span><span className={`font-semibold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${isDelayed ? 'text-slate-500 line-through' : baseTheme.textHead}`}>{getDisplayValue(currentInstallmentValue)}</span></div>{accumulatedInterest > 0 && !isDelayed && (<div className="flex justify-end items-center gap-1 text-xs text-rose-400 font-medium animate-pulse"><AlertTriangle size={12} />Inclui {getDisplayValue(accumulatedInterest)} de juros</div>)}</div><div className={`w-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-200'} rounded-full h-3 overflow-hidden border ${baseTheme.border}`}><div className={`h-full ${theme.primary} transition-all duration-500`} style={{ width: `${progress}%` }}></div></div><div className={`flex justify-between text-xs ${baseTheme.textMuted} font-mono`}><span>{inst.paidInstallments}/{inst.totalInstallments} Pagas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>Total: {getDisplayValue(inst.totalAmount)}</span></div>{!isFinished && (<div className="flex gap-2 mt-2"><button disabled={isPaidThisMonth || isDelayed} onClick={() => setDelayModal({ isOpen: true, installmentId: inst.id, installmentName: inst.description })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-amber-500/20 text-amber-500 hover:bg-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed`}>Adiar</button>{isPaidThisMonth ? (<button disabled={isDelayed} onClick={() => setAnticipateModal({ isOpen: true, installment: inst })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1`}><FastForward size={12} />Antecipar</button>) : (<button disabled={isDelayed} onClick={() => handlePayInstallment(inst)} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border ${baseTheme.border} hover:bg-slate-200 dark:hover:bg-slate-800 ${baseTheme.text} disabled:opacity-30 disabled:cursor-not-allowed`}>Pagar</button>)}</div>)}</div>
+                                    <div className="space-y-4"><div className="flex flex-col gap-1"><div className="flex justify-between text-sm"><span className={baseTheme.textMuted}>Parcela Atual</span><span className={`font-semibold ${isPrivacyMode ? 'blur-sm select-none' : ''} ${isDelayed ? 'text-slate-500 line-through' : baseTheme.textHead}`}>{getDisplayValue(Number(currentInstallmentValue))}</span></div>{accumulatedInterest > 0 && !isDelayed && (<div className="flex justify-end items-center gap-1 text-xs text-rose-400 font-medium animate-pulse"><AlertTriangle size={12} />Inclui {getDisplayValue(accumulatedInterest)} de juros</div>)}</div><div className={`w-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-200'} rounded-full h-3 overflow-hidden border ${baseTheme.border}`}><div className={`h-full ${theme.primary} transition-all duration-500`} style={{ width: `${progress}%` }}></div></div><div className={`flex justify-between text-xs ${baseTheme.textMuted} font-mono`}><span>{inst.paidInstallments}/{inst.totalInstallments} Pagas</span><span className={isPrivacyMode ? 'blur-sm select-none' : ''}>Total: {getDisplayValue(Number(inst.totalAmount))}</span></div>{!isFinished && (<div className="flex gap-2 mt-2"><button disabled={isPaidThisMonth || isDelayed} onClick={() => setDelayModal({ isOpen: true, installmentId: inst.id, installmentName: inst.description })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-amber-500/20 text-amber-500 hover:bg-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed`}>Adiar</button>{isPaidThisMonth ? (<button disabled={isDelayed} onClick={() => setAnticipateModal({ isOpen: true, installment: inst })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1`}><FastForward size={12} />Antecipar</button>) : (<button disabled={isDelayed} onClick={() => handlePayInstallment(inst)} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border ${baseTheme.border} hover:bg-slate-200 dark:hover:bg-slate-800 ${baseTheme.text} disabled:opacity-30 disabled:cursor-not-allowed`}>Pagar</button>)}</div>)}</div>
                                 </div>
                             );
                         })}</div>)}
@@ -1269,7 +1389,7 @@ function App() {
       </main>
 
       {/* MODALS */}
-      <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={async (t) => { const newT = { ...t, id: generateId() }; await saveData('transactions', newT); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddTransactionModal isOpen={isTransModalOpen} onClose={() => setIsTransModalOpen(false)} onSave={async (t) => { const newT = { ...t, id: generateId() }; await saveData('transactions', newT); setIsTransModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={handleSaveInstallment} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => { setIsSubModalOpen(false); setEditingSubscription(null); }} onSave={handleSaveSubscription} initialData={editingSubscription} themeColor={currentTheme} isDarkMode={isDarkMode} />

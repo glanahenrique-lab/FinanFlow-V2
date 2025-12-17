@@ -22,6 +22,10 @@ export interface Transaction {
   date: string; // ISO string
   category: string;
   type: TransactionType;
+  // Fields for virtual transactions (installments displayed as transactions)
+  isInstallment?: boolean;
+  installmentInfo?: string;
+  card?: string;
 }
 
 export interface InstallmentPurchase {

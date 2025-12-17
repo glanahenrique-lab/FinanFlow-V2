@@ -11,7 +11,7 @@ interface AddInstallmentModalProps {
   userCustomCards?: string[];
 }
 
-const DEFAULT_CARDS = ['Nubank', 'Inter', 'Itaú', 'Bradesco', 'Santander', 'C6 Bank'];
+const DEFAULT_CARDS = ['Nubank', 'Inter', 'Itaú', 'Bradesco', 'Santander', 'C6 Bank', 'Dinheiro', 'Sem Cartão'];
 
 export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({ 
   isOpen, 
@@ -117,7 +117,7 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
 
           {/* Seleção de Cartão */}
           <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Cartão de Crédito</label>
+            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Meio de Pagamento / Cartão</label>
             <div className="relative">
                 <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
                 <select
