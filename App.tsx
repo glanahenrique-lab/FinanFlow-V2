@@ -439,7 +439,15 @@ function App() {
     return tDate.getMonth() === currentDate.getMonth() && tDate.getFullYear() === currentDate.getFullYear();
   });
 
-  const currentMonthInvTrans = investmentTransactions.filter(it => {
+  // --- FILTER VALID ENTITIES ---
+  // Ensure we only calculate totals for investments and goals that actually exist
+  const validInvestmentIds = new Set(investments.map(i => i.id));
+  const validGoalIds = new Set(goals.map(g => g.id));
+
+  const validInvestmentTransactions = investmentTransactions.filter(t => validInvestmentIds.has(t.investmentId));
+  const validGoalTransactions = goalTransactions.filter(t => validGoalIds.has(t.goalId));
+
+  const currentMonthInvTrans = validInvestmentTransactions.filter(it => {
       const itDate = new Date(it.date);
       return itDate.getMonth() === currentDate.getMonth() && itDate.getFullYear() === currentDate.getFullYear();
   });
@@ -447,7 +455,7 @@ function App() {
   const totalInvBuys = currentMonthInvTrans.filter(it => it.type === 'buy').reduce((acc, it) => acc + Number(it.amount), 0);
   const totalInvSells = currentMonthInvTrans.filter(it => it.type === 'sell').reduce((acc, it) => acc + Number(it.amount), 0);
 
-  const currentMonthGoalDeposits = goalTransactions.filter(gt => {
+  const currentMonthGoalDeposits = validGoalTransactions.filter(gt => {
     const gtDate = new Date(gt.date);
     return gt.type === 'deposit' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
   });
@@ -456,7 +464,7 @@ function App() {
       .filter(t => t.type === 'income' && t.category !== 'Metas' && t.category !== 'Investimentos')
       .reduce((acc, t) => acc + Number(t.amount), 0);
 
-  const totalGoalWithdrawalsVal = goalTransactions.filter(gt => {
+  const totalGoalWithdrawalsVal = validGoalTransactions.filter(gt => {
       const gtDate = new Date(gt.date);
       return gt.type === 'withdraw' && gtDate.getMonth() === currentDate.getMonth() && gtDate.getFullYear() === currentDate.getFullYear();
   }).reduce((acc, t) => acc + Number(t.amount), 0);
@@ -529,7 +537,7 @@ function App() {
 
   const allocationData = Object.entries(
     investments.reduce<Record<string, number>>((acc, curr) => {
-        const current = acc[curr.type] || 0;
+        const current = Number(acc[curr.type] || 0);
         acc[curr.type] = current + Number(curr.amount);
         return acc;
     }, {})
@@ -541,9 +549,11 @@ function App() {
 
   const growthData = (() => {
     type MonthlyNetItem = { sortKey: string, name: string, net: number };
-    const monthlyNet = investmentTransactions.reduce<Record<string, MonthlyNetItem>>((acc, t) => {
+    const monthlyNet = validInvestmentTransactions.reduce<Record<string, MonthlyNetItem>>((acc, t) => {
         const date = new Date(t.date);
-        const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const month = Number(date.getMonth());
+        const year = Number(date.getFullYear());
+        const sortKey = `${year}-${String(month + 1).padStart(2, '0')}`;
         const displayKey = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
         
         let item = acc[sortKey];
@@ -552,8 +562,9 @@ function App() {
             acc[sortKey] = item;
         }
         
-        const val = t.type === 'buy' ? Number(t.amount) : -Number(t.amount);
-        item.net += val;
+        const amount = Number(t.amount);
+        const val = t.type === 'buy' ? amount : -amount;
+        item.net = Number(item.net) + val;
         
         return acc;
     }, {});
@@ -584,10 +595,28 @@ function App() {
   const confirmDelete = async () => {
     const { type, id } = confirmState;
     if (!id) return;
+    
     if (type === 'Movimentação') await deleteData('transactions', id);
     if (type === 'Parcelamento') await deleteData('installments', id);
-    if (type === 'Meta') await deleteData('goals', id);
-    if (type === 'Investimento') await deleteData('investments', id);
+    
+    if (type === 'Meta') {
+        // Clean up transactions associated with this goal
+        const linkedTrans = goalTransactions.filter(t => t.goalId === id);
+        for (const t of linkedTrans) {
+            await deleteData('goal_transactions', t.id);
+        }
+        await deleteData('goals', id);
+    }
+    
+    if (type === 'Investimento') {
+        // Clean up transactions associated with this investment
+        const linkedTrans = investmentTransactions.filter(t => t.investmentId === id);
+        for (const t of linkedTrans) {
+            await deleteData('investment_transactions', t.id);
+        }
+        await deleteData('investments', id);
+    }
+    
     if (type === 'Assinatura') {
         const sub = subscriptions.find(s => s.id === id);
         if (sub) {
