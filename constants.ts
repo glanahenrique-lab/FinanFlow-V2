@@ -1,5 +1,5 @@
 
-import { Crown, Sparkles, LayoutDashboard, ArrowDownRight, Layers, Repeat, PiggyBank, TrendingUp, Bell, LucideIcon, Zap, MessageSquare } from 'lucide-react';
+import { Crown, Sparkles, LayoutDashboard, ArrowDownRight, Layers, Repeat, PiggyBank, TrendingUp, Bell, LucideIcon, Zap, MessageSquare, Globe } from 'lucide-react';
 import { ThemeColor } from './components/ThemeSelectionModal';
 
 export interface AppUpdate {
@@ -13,8 +13,20 @@ export interface AppUpdate {
 
 export const appUpdates: AppUpdate[] = [
     {
+        version: "3.5.0",
+        date: "Agora",
+        title: "Mercado em Tempo Real 🌎",
+        description: "Agora você pode acompanhar os principais índices e notícias do mercado financeiro sem sair do app.",
+        features: [
+            "Painel de Índices: Ibovespa, Dólar, Euro e Cripto.",
+            "Radar de Notícias IA: Resumos do que está acontecendo no mundo financeiro via Gemini Search.",
+            "Visualização Avançada: Gráficos de tendência para ativos globais."
+        ],
+        icon: Globe
+    },
+    {
         version: "3.4.0",
-        date: "Hoje",
+        date: "Recente",
         title: "Sua opinião importa! 📣",
         description: "Adicionamos um canal direto para você nos enviar feedbacks e sugestões de melhoria.",
         features: [
@@ -22,18 +34,6 @@ export const appUpdates: AppUpdate[] = [
             "Melhorias na estabilidade: Ajustes finos no processamento de dados.",
         ],
         icon: MessageSquare
-    },
-    {
-        version: "3.3.0",
-        date: "Recente",
-        title: "Tudo Liberado! 🚀",
-        description: "O FinanFlow agora é 100% gratuito para todos os usuários.",
-        features: [
-            "Investimentos Liberados: Gerencie sua carteira sem custos.",
-            "IA Ilimitada: Use o consultor financeiro quantas vezes quiser.",
-            "Sem restrições: Acesso total a todas as ferramentas."
-        ],
-        icon: Zap
     },
 ];
 
@@ -68,6 +68,7 @@ export const NAV_ITEMS = [
   { id: 'subscriptions', icon: Repeat, label: 'Fixos' },
   { id: 'goals', icon: PiggyBank, label: 'Metas' },
   { id: 'investments', icon: TrendingUp, label: 'Invest' },
+  { id: 'market', icon: Globe, label: 'Mercado' },
   { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
   { id: 'updates', icon: Bell, label: 'Avisos' },
 ];

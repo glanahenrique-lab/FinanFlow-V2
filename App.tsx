@@ -39,7 +39,8 @@ import {
   LucideIcon,
   CreditCard as CreditCardIcon,
   History,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from 'lucide-react';
 import { 
   PieChart,
@@ -77,6 +78,7 @@ import { AnticipateModal } from './components/AnticipateModal';
 import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { FeedbackModal } from './components/FeedbackModal';
+import { MarketTab } from './components/MarketTab';
 import { getFinancialAdvice } from './services/geminiService';
 import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor } from './utils';
 import { themes, appUpdates, NAV_ITEMS } from './constants';
@@ -107,7 +109,7 @@ function App() {
   const [userName, setUserName] = useState('Investidor');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCustomCards, setUserCustomCards] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'updates' | 'feedback' >('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'market' | 'updates' | 'feedback' >('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
@@ -935,6 +937,11 @@ function App() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* MARKET TAB */}
+            {activeTab === 'market' && (
+                <MarketTab themeColor={currentTheme} isDarkMode={isDarkMode} />
             )}
 
             {/* FEEDBACK TAB (VIRTUAL) */}
