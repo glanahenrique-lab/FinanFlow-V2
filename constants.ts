@@ -1,5 +1,19 @@
 
-import { Crown, Sparkles, LayoutDashboard, ArrowDownRight, Layers, Repeat, PiggyBank, TrendingUp, Bell, LucideIcon, Zap, MessageSquare, Globe } from 'lucide-react';
+import { 
+  Crown, 
+  Sparkles, 
+  LayoutGrid, 
+  Activity, 
+  Receipt, 
+  CalendarClock, 
+  Target, 
+  TrendingUp, 
+  Bell, 
+  LucideIcon, 
+  Zap, 
+  MessageSquareText, 
+  Globe2 
+} from 'lucide-react';
 import { ThemeColor } from './components/ThemeSelectionModal';
 
 export interface AppUpdate {
@@ -22,7 +36,7 @@ export const appUpdates: AppUpdate[] = [
             "Radar de Notícias IA: Resumos do que está acontecendo no mundo financeiro via Gemini Search.",
             "Visualização Avançada: Gráficos de tendência para ativos globais."
         ],
-        icon: Globe
+        icon: Globe2
     },
     {
         version: "3.4.0",
@@ -33,7 +47,7 @@ export const appUpdates: AppUpdate[] = [
             "Novo sistema de feedback: Envie sugestões direto para os desenvolvedores.",
             "Melhorias na estabilidade: Ajustes finos no processamento de dados.",
         ],
-        icon: MessageSquare
+        icon: MessageSquareText
     },
 ];
 
@@ -51,7 +65,7 @@ export const themes: Record<ThemeColor, {
     selection: string;
     stroke: string;
 }> = {
-    lime: { primary: 'bg-lime-500', hover: 'hover:bg-lime-400', text: 'text-lime-500', lightText: 'text-lime-400', bgSoft: 'bg-lime-500/10', border: 'border-lime-500/20', shadow: 'shadow-lime-500/20', gradient: 'from-lime-500 to-green-500', glowFrom: 'bg-lime-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-lime-500/30 selection:text-lime-200', stroke: '#84cc16' },
+    lime: { primary: 'bg-emerald-500', hover: 'hover:bg-emerald-400', text: 'text-emerald-600', lightText: 'text-emerald-500', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-500 to-green-500', glowFrom: 'bg-emerald-500/20', glowTo: 'bg-green-600/10', selection: 'selection:bg-emerald-500/30 selection:text-emerald-200', stroke: '#10b981' },
     emerald: { primary: 'bg-emerald-600', hover: 'hover:bg-emerald-500', text: 'text-emerald-500', lightText: 'text-emerald-400', bgSoft: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-emerald-500/20', gradient: 'from-emerald-600 to-teal-600', glowFrom: 'bg-emerald-600/20', glowTo: 'bg-teal-600/10', selection: 'selection:bg-emerald-500/30 selection:text-emerald-200', stroke: '#059669' },
     green: { primary: 'bg-green-600', hover: 'hover:bg-green-500', text: 'text-green-500', lightText: 'text-green-400', bgSoft: 'bg-green-500/10', border: 'border-green-500/20', shadow: 'shadow-green-500/20', gradient: 'from-green-600 to-emerald-600', glowFrom: 'bg-green-600/20', glowTo: 'bg-emerald-600/10', selection: 'selection:bg-green-500/30 selection:text-green-200', stroke: '#16a34a' },
     teal: { primary: 'bg-teal-400', hover: 'hover:bg-teal-300', text: 'text-teal-400', lightText: 'text-teal-300', bgSoft: 'bg-teal-500/10', border: 'border-teal-500/20', shadow: 'shadow-teal-500/20', gradient: 'from-teal-400 to-cyan-500', glowFrom: 'bg-teal-500/20', glowTo: 'to-teal-500/5', selection: 'selection:bg-teal-500/30 selection:text-teal-200', stroke: '#2dd4bf' },
@@ -61,14 +75,15 @@ export const themes: Record<ThemeColor, {
     slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200', stroke: '#64748b' },
 };
 
+// Dashboard agora na posição 3 (centro da barra inferior de 5 itens)
 export const NAV_ITEMS = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dash' },
-  { id: 'transactions', icon: ArrowDownRight, label: 'Fluxo' },
-  { id: 'installments', icon: Layers, label: 'Parcelas' },
-  { id: 'subscriptions', icon: Repeat, label: 'Fixos' },
-  { id: 'goals', icon: PiggyBank, label: 'Metas' },
+  { id: 'transactions', icon: Activity, label: 'Fluxo' },
+  { id: 'installments', icon: Receipt, label: 'Parcelas' },
+  { id: 'dashboard', icon: LayoutGrid, label: 'Painel' },
+  { id: 'subscriptions', icon: CalendarClock, label: 'Fixos' },
+  { id: 'goals', icon: Target, label: 'Metas' },
   { id: 'investments', icon: TrendingUp, label: 'Invest' },
-  { id: 'market', icon: Globe, label: 'Mercado' },
-  { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
+  { id: 'market', icon: Globe2, label: 'Mercado' },
+  { id: 'feedback', icon: MessageSquareText, label: 'Feedback' },
   { id: 'updates', icon: Bell, label: 'Avisos' },
 ];

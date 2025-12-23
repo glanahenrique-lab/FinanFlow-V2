@@ -1,4 +1,28 @@
-import { Landmark, TrendingUp, Building2, Banknote, ShieldAlert, Gem } from 'lucide-react';
+
+import { 
+  Building2, 
+  TrendingUp, 
+  Coins, 
+  ShieldCheck, 
+  Gem,
+  ArrowUpCircle,
+  PiggyBank,
+  Wallet,
+  CreditCard,
+  HeartPulse,
+  Car,
+  GraduationCap,
+  Palmtree,
+  ShoppingBag,
+  Layers,
+  Sparkles,
+  MoreHorizontal,
+  Utensils,
+  Home,
+  Briefcase,
+  Smartphone,
+  BookOpen
+} from 'lucide-react';
 
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -14,6 +38,31 @@ export const formatMonth = (date: Date) => {
 export const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 };
+
+export const getCategoryIcon = (category: string) => {
+    const cat = category || 'Outros';
+    const icons: Record<string, any> = {
+        'Salário': Briefcase,
+        'Investimento': TrendingUp,
+        'Renda Extra': Sparkles,
+        'Alimentação': Utensils,
+        'Moradia': Home,
+        'Saúde': HeartPulse,
+        'Transporte': Car,
+        'Educação': GraduationCap,
+        'Lazer': Palmtree,
+        'Serviços': Smartphone,
+        'Compras': ShoppingBag,
+        'Investimentos': TrendingUp,
+        'Metas': TargetIcon,
+        'Parcelas': Layers,
+        'Outros': MoreHorizontal,
+    };
+    return icons[cat] || icons['Outros'];
+};
+
+// Internal dummy icon for mapping
+const TargetIcon = Gem;
 
 export const getCategoryStyle = (category: string) => {
     const cat = category || 'Outros';
@@ -38,11 +87,11 @@ export const getCategoryStyle = (category: string) => {
 
 export const getInvestmentStyle = (type: string) => {
     switch (type) {
-        case 'Renda Fixa (CDB, Tesouro)': return { icon: Landmark, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' };
+        case 'Renda Fixa (CDB, Tesouro)': return { icon: PiggyBank, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' };
         case 'Ações (Bolsa)': return { icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', badge: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
         case 'FIIs (Fundos Imobiliários)': return { icon: Building2, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', badge: 'bg-orange-500/10 text-orange-500 border-orange-500/20' };
-        case 'Criptomoedas': return { icon: Banknote, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
-        case 'Reserva de Emergência': return { icon: ShieldAlert, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+        case 'Criptomoedas': return { icon: Coins, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
+        case 'Reserva de Emergência': return { icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
         default: return { icon: Gem, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20', badge: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
     }
 };
