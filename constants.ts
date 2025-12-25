@@ -12,7 +12,8 @@ import {
   LucideIcon, 
   Zap, 
   MessageSquareText, 
-  Globe2 
+  Globe2,
+  Newspaper
 } from 'lucide-react';
 import { ThemeColor } from './components/ThemeSelectionModal';
 
@@ -27,16 +28,16 @@ export interface AppUpdate {
 
 export const appUpdates: AppUpdate[] = [
     {
-        version: "3.5.0",
-        date: "Agora",
-        title: "Mercado em Tempo Real 🌎",
-        description: "Agora você pode acompanhar os principais índices e notícias do mercado financeiro sem sair do app.",
+        version: "3.6.0",
+        date: "Hoje",
+        title: "Notícias em Tempo Real 📰",
+        description: "Nova seção dedicada a notícias de economia e investimentos via Google News.",
         features: [
-            "Painel de Índices: Ibovespa, Dólar, Euro e Cripto.",
-            "Radar de Notícias IA: Resumos do que está acontecendo no mundo financeiro via Gemini Search.",
-            "Visualização Avançada: Gráficos de tendência para ativos globais."
+            "Feed de Notícias: Fique por dentro do mercado brasileiro.",
+            "Visualização de Cartões: Notícias com fotos e resumo rápido.",
+            "Link Direto: Leia a matéria completa na fonte original."
         ],
-        icon: Globe2
+        icon: Newspaper
     },
     {
         version: "3.4.0",
@@ -75,7 +76,6 @@ export const themes: Record<ThemeColor, {
     slate: { primary: 'bg-slate-500', hover: 'hover:bg-slate-400', text: 'text-slate-400', lightText: 'text-slate-300', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', shadow: 'shadow-slate-500/20', gradient: 'from-slate-500 to-gray-500', glowFrom: 'bg-slate-500/20', glowTo: 'bg-gray-400/10', selection: 'selection:bg-slate-500/30 selection:text-slate-200', stroke: '#64748b' },
 };
 
-// Dashboard agora na posição 3 (centro da barra inferior de 5 itens)
 export const NAV_ITEMS = [
   { id: 'transactions', icon: Activity, label: 'Fluxo' },
   { id: 'installments', icon: Receipt, label: 'Parcelas' },
@@ -83,7 +83,7 @@ export const NAV_ITEMS = [
   { id: 'subscriptions', icon: CalendarClock, label: 'Fixos' },
   { id: 'goals', icon: Target, label: 'Metas' },
   { id: 'investments', icon: TrendingUp, label: 'Invest' },
-  { id: 'market', icon: Globe2, label: 'Mercado' },
+  { id: 'news', icon: Newspaper, label: 'Notícias' },
   { id: 'feedback', icon: MessageSquareText, label: 'Feedback' },
   { id: 'updates', icon: Bell, label: 'Avisos' },
 ];

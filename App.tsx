@@ -48,7 +48,8 @@ import {
   CreditCard,
   Banknote,
   UserCircle,
-  HelpCircle
+  HelpCircle,
+  Newspaper
 } from 'lucide-react';
 import { 
   PieChart,
@@ -86,7 +87,7 @@ import { AnticipateModal } from './components/AnticipateModal';
 import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { FeedbackModal } from './components/FeedbackModal';
-import { MarketTab } from './components/MarketTab';
+import { NewsTab } from './components/NewsTab';
 import { getFinancialAdvice } from './services/geminiService';
 import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor, getCategoryIcon } from './utils';
 import { themes, appUpdates, NAV_ITEMS, AppUpdate } from './constants';
@@ -196,7 +197,7 @@ function App() {
   const [userName, setUserName] = useState('Investidor');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCustomCards, setUserCustomCards] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'market' | 'updates' | 'feedback' >('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'subscriptions' | 'goals' | 'investments' | 'news' | 'updates' | 'feedback' >('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [currentTheme, setCurrentTheme] = useState<ThemeColor>(() => (localStorage.getItem('appTheme') as ThemeColor) || 'lime');
@@ -1279,8 +1280,8 @@ function App() {
                 </div>
             )}
 
-            {activeTab === 'market' && <MarketTab themeColor={currentTheme} isDarkMode={isDarkMode} />}
-            
+            {activeTab === 'news' && <NewsTab themeColor={currentTheme} isDarkMode={isDarkMode} />}
+
             {activeTab === 'feedback' && (
                 <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
                     <div className={`${baseTheme.card} border ${baseTheme.border} p-10 sm:p-12 rounded-[3.5rem] max-w-lg text-center space-y-8 shadow-2xl relative overflow-hidden group`}>
@@ -1324,7 +1325,7 @@ function App() {
             )}
 
             {activeTab === 'goals' && (
-                <div className="space-y-8 max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
+                <div className="space-y-8 max-w-5xl mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
                             <FoxyMascot face="focused" themeColor={currentTheme} />
@@ -1370,7 +1371,7 @@ function App() {
             )}
 
             {activeTab === 'investments' && (
-                <div className="space-y-8 max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
+                <div className="space-y-8 max-w-5xl mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
                             <FoxyMascot face="analytical" themeColor={currentTheme} />
