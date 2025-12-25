@@ -58,7 +58,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             <FoxyMascot face="happy" showBody={true} themeColor="lime" size="lg" />
             <div className="text-center mt-2">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-2">
-                    FINAN<span className="text-emerald-600">FLOW</span>
+                    ON<span className="text-emerald-600">FLOW</span>
                 </h1>
                 <p className="text-emerald-600/70 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Cibernética Financeira</p>
             </div>

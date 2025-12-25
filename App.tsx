@@ -209,7 +209,7 @@ function App() {
   
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
     try {
-        const savedMode = localStorage.getItem('finanflow_privacy_mode');
+        const savedMode = localStorage.getItem('onflow_privacy_mode');
         return savedMode !== null ? JSON.parse(savedMode) : false;
     } catch { return false; }
   });
@@ -276,7 +276,7 @@ function App() {
                         }
                         if (userData.preferences.isPrivacyMode !== undefined) {
                             setIsPrivacyMode(userData.preferences.isPrivacyMode);
-                            localStorage.setItem('finanflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode));
+                            localStorage.setItem('onflow_privacy_mode', JSON.stringify(userData.preferences.isPrivacyMode));
                         }
                     }
                 } else {
@@ -320,7 +320,7 @@ function App() {
   useEffect(() => {
     localStorage.setItem('appTheme', currentTheme);
     localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
-    localStorage.setItem('finanflow_privacy_mode', JSON.stringify(isPrivacyMode));
+    localStorage.setItem('onflow_privacy_mode', JSON.stringify(isPrivacyMode));
     if (currentUser && !isInitialLoad.current) {
         const updatePrefs = async () => {
             try { await updateDoc(doc(db, "users", currentUser.uid), {
@@ -1305,7 +1305,7 @@ function App() {
                         <div className="flex justify-center mb-6">
                             <FoxyMascot face="happy" themeColor={currentTheme} size="lg" />
                         </div>
-                        <h2 className={`text-4xl lg:text-5xl font-black ${baseTheme.textHead} tracking-tighter uppercase`}>EVOLUÇÃO <span className={theme.text}>FINAN</span></h2>
+                        <h2 className={`text-4xl lg:text-5xl font-black ${baseTheme.textHead} tracking-tighter uppercase`}>EVOLUÇÃO <span className={theme.text}>ON</span></h2>
                     </div>
                     <div className="space-y-8">
                         {appUpdates.map((update: AppUpdate, index) => (

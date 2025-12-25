@@ -169,7 +169,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
             <div className="flex items-center justify-center gap-2 pt-2">
                 <Sparkles className="text-yellow-500" size={14} />
-                <span className={`text-[10px] ${styles.textMuted}`}>Sua colaboração ajuda a tornar o FinanFlow melhor.</span>
+                <span className={`text-[10px] ${styles.textMuted}`}>Sua colaboração ajuda a tornar o OnFlow melhor.</span>
             </div>
           </form>
         )}

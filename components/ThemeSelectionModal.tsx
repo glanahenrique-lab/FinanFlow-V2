@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, Check, Moon, Sun } from 'lucide-react';
 
@@ -73,7 +74,7 @@ export const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({
 
             {/* Colors Grid */}
             <div>
-                <p className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Tons de FinanFlow</p>
+                <p className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Tons de OnFlow</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
                 {themes.map((theme) => (
                     <button

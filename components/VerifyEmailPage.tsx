@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Mail, RefreshCw, LogOut, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 import { sendEmailVerification, signOut, User } from 'firebase/auth';
@@ -93,7 +94,7 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ user, onLogout
         </p>
 
         <p className={`text-sm ${styles.textBody} mb-8`}>
-          Para garantir a segurança da sua conta, você precisa verificar seu e-mail antes de acessar o FinanFlow.
+          Para garantir a segurança da sua conta, você precisa verificar seu e-mail antes de acessar o OnFlow.
         </p>
 
         {message && (

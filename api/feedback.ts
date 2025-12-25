@@ -23,7 +23,7 @@ export default async function handler(request: Request) {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'FinanFlow <onboarding@resend.dev>',
+        from: 'OnFlow <onboarding@resend.dev>',
         to: 'bielsky008@gmail.com',
         subject: `📣 Novo Feedback: ${type.toUpperCase()}`,
         html: `
@@ -41,7 +41,7 @@ export default async function handler(request: Request) {
                 "${message}"
               </div>
               <p style="font-size: 12px; color: #64748b; margin-top: 30px; text-align: center;">
-                Enviado via FinanFlow AI em ${new Date(timestamp).toLocaleString('pt-BR')}
+                Enviado via OnFlow AI em ${new Date(timestamp).toLocaleString('pt-BR')}
               </p>
             </div>
           </div>

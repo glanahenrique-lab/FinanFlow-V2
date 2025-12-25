@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -15,7 +15,8 @@ import {
   Zap,
   BarChart3,
   Search,
-  Cpu
+  Cpu,
+  Radio
 } from 'lucide-react';
 import { FoxyMascot } from '../App';
 
@@ -30,6 +31,46 @@ interface MarketTabProps {
   themeColor: string;
   isDarkMode: boolean;
 }
+
+// Sub-componente para o Widget do TradingView
+const TradingViewNewsWidget = ({ isDarkMode }: { isDarkMode: boolean }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Limpa o container antes de adicionar para evitar duplicatas em re-renders
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js';
+    script.type = 'text/javascript';
+    script.async = true;
+    
+    // Configuração do Widget focado em Brasil e Economia
+    const config = {
+      "feedMode": "all_symbols",
+      "colorTheme": isDarkMode ? "dark" : "light",
+      "isTransparent": true,
+      "displayMode": "regular",
+      "width": "100%",
+      "height": "600",
+      "locale": "br"
+    };
+
+    script.innerHTML = JSON.stringify(config);
+    
+    if (containerRef.current) {
+      containerRef.current.appendChild(script);
+    }
+  }, [isDarkMode]);
+
+  return (
+    <div className="tradingview-widget-container" ref={containerRef}>
+      <div className="tradingview-widget-container__widget"></div>
+    </div>
+  );
+};
 
 export const MarketTab: React.FC<MarketTabProps> = ({ themeColor, isDarkMode }) => {
   const [data, setData] = useState<MarketData | null>(null);
@@ -136,21 +177,35 @@ export const MarketTab: React.FC<MarketTabProps> = ({ themeColor, isDarkMode }) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className={`${styles.textHead} text-sm font-black flex items-center gap-3 uppercase tracking-widest px-2`}>
-            <Search className="text-emerald-500" size={18} /> Radar de Notícias
-          </h3>
-          <div className="space-y-4">
-            {data?.news.map((news, i) => (
-              <div key={i} className={`${styles.newsCard} border p-6 rounded-[2rem] shadow-sm transition-all group relative overflow-hidden`}>
-                <span className={`text-[8px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-[0.2em] mb-4 inline-block`}>{news.source}</span>
-                <h4 className={`${styles.textHead} text-base font-black mb-2 group-hover:text-emerald-500 transition-colors uppercase tracking-tighter`}>{news.title}</h4>
-                <p className={`${styles.textMuted} text-xs font-medium leading-relaxed`}>{news.summary}</p>
-              </div>
-            ))}
-          </div>
+        <div className="lg:col-span-2 space-y-8">
+          <section className="space-y-4">
+            <h3 className={`${styles.textHead} text-sm font-black flex items-center gap-3 uppercase tracking-widest px-2`}>
+              <Search className="text-emerald-500" size={18} /> Resumo IA (Brasil)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data?.news.map((news, i) => (
+                <div key={i} className={`${styles.newsCard} border p-6 rounded-[2rem] shadow-sm transition-all group relative overflow-hidden flex flex-col justify-between`}>
+                  <div>
+                    <span className={`text-[8px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-[0.2em] mb-4 inline-block`}>{news.source}</span>
+                    <h4 className={`${styles.textHead} text-base font-black mb-2 group-hover:text-emerald-500 transition-colors uppercase tracking-tighter`}>{news.title}</h4>
+                    <p className={`${styles.textMuted} text-xs font-medium leading-relaxed mb-4`}>{news.summary}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-          {/* Renderização de Fontes de Grounding para transparência e conformidade com as diretrizes da API Gemini Search */}
+          {/* Seção TradingView - Widget de Notícias em Tempo Real */}
+          <section className="space-y-4">
+            <h3 className={`${styles.textHead} text-sm font-black flex items-center gap-3 uppercase tracking-widest px-2`}>
+              <Radio className="text-emerald-500 animate-pulse" size={18} /> Feed Global em Tempo Real
+            </h3>
+            <div className={`${styles.card} border p-2 rounded-[2.5rem] shadow-xl overflow-hidden`}>
+              <TradingViewNewsWidget isDarkMode={isDarkMode} />
+            </div>
+          </section>
+
+          {/* Renderização de Fontes de Grounding */}
           {data?.sources && data.sources.length > 0 && (
             <div className="mt-8 px-2 animate-in fade-in duration-700">
                <h4 className={`${styles.textHead} text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2`}>
@@ -173,7 +228,7 @@ export const MarketTab: React.FC<MarketTabProps> = ({ themeColor, isDarkMode }) 
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
            <h3 className={`${styles.textHead} text-sm font-black flex items-center gap-3 uppercase tracking-widest px-2`}>
               <TrendingUp className="text-emerald-500" size={18} /> Fox Insight
            </h3>
@@ -187,6 +242,20 @@ export const MarketTab: React.FC<MarketTabProps> = ({ themeColor, isDarkMode }) 
               <div className={`p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center`}>
                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Módulo Analítico</p>
                  <p className={`text-[10px] ${styles.textHead} font-black uppercase tracking-tighter`}>Monitoramento Bio-Digital</p>
+              </div>
+           </div>
+           
+           <div className={`${styles.card} border p-6 rounded-[2.5rem] shadow-sm`}>
+              <h4 className={`${styles.textHead} text-[10px] font-black uppercase tracking-widest mb-4 opacity-60`}>Status do Radar</h4>
+              <div className="space-y-3">
+                 <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
+                    <span className={styles.textMuted}>Sinal Gemini</span>
+                    <span className="text-emerald-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Ativo</span>
+                 </div>
+                 <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
+                    <span className={styles.textMuted}>TradingView Live</span>
+                    <span className="text-emerald-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Conectado</span>
+                 </div>
               </div>
            </div>
         </div>

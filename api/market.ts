@@ -101,7 +101,7 @@ export default async function handler(request: Request) {
         { 
           title: "Sincronizando Boletim de Notícias", 
           summary: "A Foxy está vasculhando os portais de economia. Tente atualizar o radar em alguns segundos para receber os dados frescos.", 
-          source: "FinanFlow AI" 
+          source: "OnFlow AI" 
         }
       ], 
       sources: [] 
