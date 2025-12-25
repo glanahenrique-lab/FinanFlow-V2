@@ -64,9 +64,12 @@ export interface GoalTransaction {
 export interface Investment {
   id: string;
   name: string;
-  amount: number;
+  category: string; // 'Cripto', 'Ações', 'Renda Fixa', etc.
   date: string; // ISO string
-  type: string; // 'Renda Fixa', 'Ações', 'FIIs', 'Cripto', etc.
+  quantity: number;
+  purchasePrice: number;
+  currentPrice: number;
+  totalInvested: number; // Cálculo: quantity * purchasePrice
 }
 
 export interface InvestmentTransaction {

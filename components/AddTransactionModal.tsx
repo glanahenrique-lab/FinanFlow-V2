@@ -70,8 +70,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       type,
       date,
       card: selectedCard,
-      paidFor: paidFor.trim() || undefined,
-      reimbursed: paidFor.trim() ? reimbursed : undefined
+      paidFor: paidFor.trim() || null as any,
+      reimbursed: paidFor.trim() ? reimbursed : null as any
     });
   };
 
@@ -213,7 +213,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
 
             {paidFor.trim() && (
-                <div className="animate-in slide-in-from-top-2 duration-300">
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/30 cursor-pointer hover:border-emerald-500/50 transition-colors">
                         <input
                             type="checkbox"

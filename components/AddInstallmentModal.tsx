@@ -66,8 +66,8 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
       paidInstallments: 0,
       purchaseDate,
       card: finalCardName,
-      paidFor: paidFor.trim() || undefined,
-      reimbursed: paidFor.trim() ? reimbursed : undefined
+      paidFor: paidFor.trim() || null as any,
+      reimbursed: paidFor.trim() ? reimbursed : null as any
     }, saveCustomCard && selectedCard === 'Outro');
     
     onClose();
@@ -131,7 +131,7 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
                 />
             </div>
             {paidFor.trim() && (
-                <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
+                <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className={`flex items-center gap-3 p-3 rounded-xl border border-dashed ${isDarkMode ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-emerald-500/50 transition-colors`}>
                         <input
                             type="checkbox"

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutGrid, 
@@ -14,6 +13,7 @@ import {
   BrainCircuit,
   Trash2,
   ChevronRight,
+  ChevronLeft,
   ChevronUp,
   ChevronDown,
   Calculator,
@@ -88,6 +88,7 @@ import { InvestmentDetailsModal } from './components/InvestmentDetailsModal';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { FeedbackModal } from './components/FeedbackModal';
 import { NewsTab } from './components/NewsTab';
+import { InvestmentsTab } from './components/InvestmentsTab';
 import { getFinancialAdvice } from './services/geminiService';
 import { formatCurrency, formatMonth, generateId, getCategoryStyle, getInvestmentStyle, getInvestmentColor, getCategoryIcon } from './utils';
 import { themes, appUpdates, NAV_ITEMS, AppUpdate } from './constants';
@@ -253,6 +254,22 @@ function App() {
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const handlePrevMonth = () => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() - 1);
+      return newDate;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + 1);
+      return newDate;
+    });
+  };
+
   useEffect(() => {
     let userUnsub: (() => void) | undefined;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -365,7 +382,15 @@ function App() {
 
   const saveData = async (collectionName: string, data: any) => {
     if (!currentUser) return;
-    try { await setDoc(doc(db, "users", currentUser.uid, collectionName, data.id), data); } catch (e) { console.error(`Erro salvar ${collectionName}:`, e); }
+    try { 
+      const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) acc[key] = value;
+        return acc;
+      }, {} as any);
+      await setDoc(doc(db, "users", currentUser.uid, collectionName, data.id), cleanData); 
+    } catch (e) { 
+      console.error(`Erro salvar ${collectionName}:`, e); 
+    }
   };
 
   const deleteData = async (collectionName: string, id: string) => {
@@ -405,8 +430,8 @@ function App() {
         type, 
         card: card || null, 
         date: new Date().toISOString(),
-        paidFor: paidFor || undefined,
-        reimbursed: paidFor ? false : undefined
+        paidFor: paidFor || null,
+        reimbursed: paidFor ? false : null
     };
     await saveData('transactions', newTrans);
   };
@@ -562,7 +587,6 @@ function App() {
   const totalMonthlyExpense = Number(totalVariableExpense) + Number(totalFixedExpense) + Number(totalInstallmentsCost) + Number(totalInvBuys) + Number(totalGoalDepositsVal);
   const balance = Number(totalMonthlyIncome) - Number(totalMonthlyExpense);
 
-  // LÓGICA DE REEMBOLSOS PENDENTES (TERCEIROS)
   const totalPendingReimbursements = useMemo(() => {
       const transTotal = transactions
           .filter(t => t.type === 'expense' && t.paidFor && !t.reimbursed)
@@ -595,6 +619,15 @@ function App() {
     return { name: cat, value };
   }).filter(d => d.value > 0).sort((a, b) => Number(b.value) - Number(a.value));
 
+  const filteredInvestments = useMemo(() => {
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      return investments.filter(inv => {
+          const invDate = new Date(inv.date);
+          return invDate.getFullYear() < currentYear || (invDate.getFullYear() === currentYear && invDate.getMonth() <= currentMonth);
+      });
+  }, [investments, currentDate]);
+
   const handleDelete = async (id: string, type: string, data?: any) => {
     setConfirmState({ isOpen: true, type, id, title: `Excluir ${type}?`, message: 'Essa ação apagará o registro e sincronizará os saldos.', data });
   };
@@ -612,8 +645,8 @@ function App() {
              if (trans.category === 'Investimentos') {
                  const inv = investments.find(i => i.name === descPart);
                  if (inv) {
-                     const newAmt = isAporte ? inv.amount - trans.amount : inv.amount + trans.amount;
-                     await saveData('investments', { ...inv, amount: Math.max(0, newAmt) });
+                     const newAmt = isAporte ? inv.totalInvested - trans.amount : inv.totalInvested + trans.amount;
+                     await saveData('investments', { ...inv, totalInvested: Math.max(0, newAmt) });
                      const q = query(collection(db, "users", uid, "investment_transactions"), where("investmentId", "==", inv.id), where("amount", "==", trans.amount));
                      const snap = await getDocs(q); snap.forEach(async doc => await deleteDoc(doc.ref));
                  }
@@ -666,14 +699,10 @@ function App() {
     await addTransactionRecord(`${type === 'add' ? 'Aporte Meta' : 'Resgate Meta'}: ${goal.title}`, Number(amount) || 0, 'Metas', type === 'add' ? 'expense' : 'income');
   };
 
-  const handleUpdateInvestmentBalance = async (amount: number, type: 'buy' | 'sell') => {
-    if (!selectedInvestmentId) return;
-    const invest = investments.find(i => i.id === selectedInvestmentId);
-    if (!invest) return;
-    const newAmount = type === 'buy' ? (Number(invest.amount) || 0) + (Number(amount) || 0) : Math.max(0, (Number(invest.amount) || 0) - (Number(amount) || 0));
-    await saveData('investments', { ...invest, amount: newAmount });
-    await saveData('investment_transactions', { id: generateId(), investmentId: selectedInvestmentId, amount: Number(amount) || 0, date: new Date().toISOString(), type });
-    await addTransactionRecord(`${type === 'buy' ? 'Aporte Investimento' : 'Resgate Investimento'}: ${invest.name}`, Number(amount) || 0, 'Investimentos', type === 'buy' ? 'expense' : 'income');
+  const handleUpdateInvestmentManualPrice = async (id: string, newPrice: number) => {
+      const inv = investments.find(i => i.id === id);
+      if (!inv) return;
+      await saveData('investments', { ...inv, currentPrice: newPrice });
   };
 
   const handleGenerateReport = async () => {
@@ -908,9 +937,14 @@ function App() {
                                 <h2 className={`text-3xl lg:text-4xl font-black ${baseTheme.textHead} tracking-tight leading-none`}>
                                     {getGreeting()}
                                 </h2>
-                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2`}>
-                                    <Zap className={theme.text} size={14} /> Inteligência de Comando
-                                </p>
+                                <div className="flex items-center gap-3 mt-3">
+                                   <button onClick={handlePrevMonth} className={`p-1.5 rounded-lg border ${baseTheme.border} ${baseTheme.textMuted} hover:${theme.text} hover:bg-${currentTheme}-500/10 transition-colors`}><ChevronLeft size={14} /></button>
+                                   <div className={`text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ${baseTheme.textMuted}`}>
+                                      <Calendar size={14} className={theme.text} />
+                                      {formatMonth(currentDate)}
+                                   </div>
+                                   <button onClick={handleNextMonth} className={`p-1.5 rounded-lg border ${baseTheme.border} ${baseTheme.textMuted} hover:${theme.text} hover:bg-${currentTheme}-500/10 transition-colors`}><ChevronRight size={14} /></button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1058,7 +1092,11 @@ function App() {
                             <FoxyMascot face="neutral" themeColor={currentTheme} />
                             <div>
                                 <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Fluxo Mensal</h2>
-                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>{formatMonth(currentDate)}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                   <button onClick={handlePrevMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronLeft size={16} /></button>
+                                   <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest`}>{formatMonth(currentDate)}</p>
+                                   <button onClick={handleNextMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronRight size={16} /></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1175,7 +1213,11 @@ function App() {
                             <FoxyMascot face="focused" themeColor={currentTheme} />
                             <div>
                                 <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Parcelados</h2>
-                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Dívidas no Sistema</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                   <button onClick={handlePrevMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronLeft size={16} /></button>
+                                   <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest`}>{formatMonth(currentDate)}</p>
+                                   <button onClick={handleNextMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronRight size={16} /></button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto">
@@ -1282,6 +1324,34 @@ function App() {
 
             {activeTab === 'news' && <NewsTab themeColor={currentTheme} isDarkMode={isDarkMode} />}
 
+            {activeTab === 'investments' && (
+                <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                            <FoxyMascot face="analytical" themeColor={currentTheme} />
+                            <div>
+                                <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Patrimônio</h2>
+                                <div className="flex items-center gap-3 mt-1">
+                                   <button onClick={handlePrevMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronLeft size={16} /></button>
+                                   <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest`}>{formatMonth(currentDate)}</p>
+                                   <button onClick={handleNextMonth} className={`p-1 rounded-md ${baseTheme.textMuted} hover:${theme.text} transition-colors`}><ChevronRight size={16} /></button>
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsInvestModalOpen(true)} className={`${theme.primary} text-white px-5 py-2.5 rounded-2xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest w-full sm:w-auto justify-center`}><Plus size={16} /> Novo Ativo</button>
+                    </div>
+                    <InvestmentsTab 
+                        investments={filteredInvestments} 
+                        onAddClick={() => setIsInvestModalOpen(true)}
+                        onDelete={(id, data) => handleDelete(id, 'Investimento', data)}
+                        onUpdatePrice={handleUpdateInvestmentManualPrice}
+                        themeColor={currentTheme}
+                        isDarkMode={isDarkMode}
+                        isPrivacyMode={isPrivacyMode}
+                    />
+                </div>
+            )}
+
             {activeTab === 'feedback' && (
                 <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
                     <div className={`${baseTheme.card} border ${baseTheme.border} p-10 sm:p-12 rounded-[3.5rem] max-w-lg text-center space-y-8 shadow-2xl relative overflow-hidden group`}>
@@ -1369,54 +1439,6 @@ function App() {
                     )}
                 </div>
             )}
-
-            {activeTab === 'investments' && (
-                <div className="space-y-8 max-w-5xl mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <FoxyMascot face="analytical" themeColor={currentTheme} />
-                            <div>
-                                <h2 className={`text-3xl lg:text-4xl font-black ${baseTheme.textHead} tracking-tight`}>Patrimônio</h2>
-                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Gestão de Ativos</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setIsInvestModalOpen(true)} className={`${theme.primary} text-white px-4 py-2 rounded-xl font-black text-[10px] shadow-xl active:scale-95 transition-all uppercase tracking-widest`}><Plus size={14} /> Novo Ativo</button>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2 space-y-4">
-                            {investments.length === 0 ? (
-                                <EmptyState themeColor={currentTheme} title="A carteira está vazia!" message="Comece a diversificar seu capital." isDarkMode={isDarkMode} face="analytical" />
-                            ) : (
-                                investments.map(inv => {
-                                    const style = getInvestmentStyle(inv.type);
-                                    const Icon = style.icon;
-                                    return (
-                                        <div key={inv.id} onClick={() => setSelectedInvestmentId(inv.id)} className={`${baseTheme.card} border ${baseTheme.border} p-6 rounded-[2rem] shadow-sm group cursor-pointer hover:border-${currentTheme}-500/40 transition-all flex items-center justify-between`}>
-                                            <div className="flex items-center gap-5">
-                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${style.border} ${style.bg}`}><Icon size={24} className={style.color} /></div>
-                                                <div>
-                                                    <h4 className={`font-black ${baseTheme.textHead} text-lg uppercase tracking-tighter`}>{inv.name}</h4>
-                                                    <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${style.badge}`}>{inv.type}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-6">
-                                                <p className={`text-2xl font-black ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(inv.amount)}</p>
-                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(inv.id, 'Investimento', inv); }} className="p-3 rounded-2xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all"><Trash2 size={18} /></button>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                        <div className="space-y-6">
-                            <div className={`${baseTheme.card} border ${baseTheme.border} p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden bg-gradient-to-br ${theme.gradient} text-white`}>
-                                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] opacity-60 mb-4">Capital Total</h4>
-                                <p className={`text-4xl font-black ${isPrivacyMode ? 'blur-md' : ''}`}>{formatCurrency(investments.reduce((acc, i) => acc + i.amount, 0))}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
       </main>
 
@@ -1424,9 +1446,9 @@ function App() {
       <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={handleSaveInstallment} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => { setIsSubModalOpen(false); setEditingSubscription(null); }} onSave={handleSaveSubscription} initialData={editingSubscription} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={async (inv) => { const newInv = { ...inv, id: generateId() }; await saveData('investments', newInv); if (inv.amount > 0) { await addTransactionRecord(`Aporte Investimento: ${inv.name}`, inv.amount, 'Investimentos', 'expense'); await saveData('investment_transactions', { id: generateId(), investmentId: newInv.id, amount: inv.amount, date: inv.date, type: 'buy' }); } setIsInvestModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={async (inv) => { const newInv = { ...inv, id: generateId() }; await saveData('investments', newInv); if (inv.totalInvested > 0) { await addTransactionRecord(`Aporte Investimento: ${inv.name}`, inv.totalInvested, 'Investimentos', 'expense'); await saveData('investment_transactions', { id: generateId(), investmentId: newInv.id, amount: inv.totalInvested, date: inv.date, type: 'buy' }); } setIsInvestModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <GoalDetailsModal isOpen={!!selectedGoalId} onClose={() => setSelectedGoalId(null)} goal={selectedGoal} transactions={goalTransactions} onUpdateBalance={handleUpdateGoalBalance} onDeleteTransaction={(id) => deleteData('goal_transactions', id)} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
-      <InvestmentDetailsModal isOpen={!!selectedInvestmentId} onClose={() => setSelectedInvestmentId(null)} investment={selectedInvestment} transactions={investmentTransactions} onUpdateBalance={handleUpdateInvestmentBalance} onDeleteTransaction={(id) => deleteData('investment_transactions', id)} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
+      <InvestmentDetailsModal isOpen={!!selectedInvestmentId} onClose={() => setSelectedInvestmentId(null)} investment={selectedInvestment} transactions={investmentTransactions} onUpdateBalance={() => {}} onDeleteTransaction={(id) => deleteData('investment_transactions', id)} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <FinancialReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} aiAnalysis={aiAnalysis} isAnalyzing={isAnalyzing} chartData={pieChartData} totalIncome={totalMonthlyIncome} totalExpense={totalMonthlyExpense} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false, data: null })} isDarkMode={isDarkMode} />
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} currentName={userName} currentPhoto={userPhoto} onSave={handleProfileUpdate} onDeleteAccount={handleDeleteAccount} themeColor={currentTheme} currentTheme={currentTheme} onSelectTheme={setCurrentTheme} onToggleDarkMode={() => setIsDarkMode(prev => !prev)} isDarkMode={isDarkMode} />

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { X, Calculator, Info } from 'lucide-react';
 import { Investment } from '../types';
 
 interface AddInvestmentModalProps {
@@ -12,24 +13,44 @@ interface AddInvestmentModalProps {
 
 export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({ isOpen, onClose, onSave, themeColor, isDarkMode }) => {
   const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState('Renda Fixa');
+  const [category, setCategory] = useState('Renda Fixa');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [quantity, setQuantity] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [currentPrice, setCurrentPrice] = useState('');
+
+  // Cálculo automático do total investido (exibido apenas visualmente no modal)
+  const totalInvested = (Number(quantity) || 0) * (Number(purchasePrice) || 0);
+
+  useEffect(() => {
+      if (isOpen) {
+          setName('');
+          setCategory('Renda Fixa');
+          setDate(new Date().toISOString().split('T')[0]);
+          setQuantity('');
+          setPurchasePrice('');
+          setCurrentPrice('');
+      }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (totalInvested <= 0) {
+        alert("O valor total do investimento deve ser maior que zero.");
+        return;
+    }
+
     onSave({
       name,
-      amount: Number(amount),
-      type,
+      category,
       date,
+      quantity: Number(quantity),
+      purchasePrice: Number(purchasePrice),
+      currentPrice: Number(currentPrice) || Number(purchasePrice),
+      totalInvested: totalInvested
     });
-    setName('');
-    setAmount('');
-    setType('Renda Fixa');
-    setDate(new Date().toISOString().split('T')[0]);
     onClose();
   };
 
@@ -41,7 +62,6 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({ isOpen, 
     inputBg: 'bg-slate-950',
     inputBorder: 'border-slate-800',
     inputText: 'text-white',
-    closeHover: 'hover:text-white'
   } : {
     bg: 'bg-white',
     border: 'border-slate-200',
@@ -50,79 +70,106 @@ export const AddInvestmentModal: React.FC<AddInvestmentModalProps> = ({ isOpen, 
     inputBg: 'bg-slate-50',
     inputBorder: 'border-slate-200',
     inputText: 'text-slate-900',
-    closeHover: 'hover:text-slate-700'
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl transition-colors duration-300`}>
+      <div className={`${styles.bg} border ${styles.border} rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col`}>
         <div className={`flex justify-between items-center p-6 border-b ${styles.border}`}>
-          <h2 className={`text-xl font-bold ${styles.textHead}`}>Novo Investimento</h2>
-          <button onClick={onClose} className={`text-slate-400 ${styles.closeHover} transition-colors`}>
+          <h2 className={`text-xl font-black ${styles.textHead} uppercase tracking-tighter`}>Registrar Ativo</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-400 transition-colors">
             <X size={24} />
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Nome do Ativo / Investimento</label>
-            <input
-              required
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
-              placeholder="Ex: Tesouro Direto, AAPL, Bitcoin"
-            />
+          <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${styles.textLabel} mb-1.5 ml-1`}>Nome do Ativo</label>
+                <input
+                  required
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-xl px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                  placeholder="Ex: Bitcoin, PETR4, Tesouro"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${styles.textLabel} mb-1.5 ml-1`}>Categoria</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-xl px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+                >
+                  <option>Cripto</option>
+                  <option>Ações</option>
+                  <option>FIIs</option>
+                  <option>Renda Fixa</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-[10px] font-black uppercase tracking-widest ${styles.textLabel} mb-1.5 ml-1`}>Data do Aporte</label>
+                <input
+                  required
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-xl px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                />
+              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Valor Aportado (R$)</label>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${styles.textLabel} mb-1.5 ml-1`}>Quantidade</label>
               <input
                 required
                 type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                step="any"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-xl px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Data do Aporte</label>
+              <label className={`block text-[10px] font-black uppercase tracking-widest ${styles.textLabel} mb-1.5 ml-1`}>Preço Unitário (R$)</label>
               <input
                 required
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                type="number"
+                step="0.01"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-xl px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                placeholder="0.00"
               />
             </div>
           </div>
 
-          <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Tipo de Investimento</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
-            >
-              <option>Renda Fixa (CDB, Tesouro)</option>
-              <option>Ações (Bolsa)</option>
-              <option>FIIs (Fundos Imobiliários)</option>
-              <option>Criptomoedas</option>
-              <option>Fundos de Investimento</option>
-              <option>Reserva de Emergência</option>
-              <option>Outros</option>
-            </select>
+          <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-emerald-50 border-emerald-100'} border flex items-center justify-between`}>
+             <div className="flex items-center gap-2">
+                <Calculator className="text-emerald-500" size={18} />
+                <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Total Aplicado</span>
+             </div>
+             <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalInvested)}
+             </span>
+          </div>
+
+          <div className="flex items-start gap-2 p-2 opacity-60">
+             <Info size={14} className="shrink-0 mt-0.5" />
+             <p className="text-[9px] font-medium leading-relaxed">Você poderá atualizar o preço atual do ativo manualmente na lista após salvar.</p>
           </div>
 
           <button
             type="submit"
-            className={`w-full mt-4 bg-${themeColor}-600 hover:bg-${themeColor}-500 text-white font-semibold py-3 rounded-lg transition-colors shadow-lg shadow-${themeColor}-900/20`}
+            className={`w-full bg-${themeColor}-600 hover:bg-${themeColor}-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs`}
           >
-            Registrar Aporte
+            Confirmar Investimento
           </button>
         </form>
       </div>
