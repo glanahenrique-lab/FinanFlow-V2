@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard } from 'lucide-react';
+import { X, CreditCard, User, CheckCircle2 } from 'lucide-react';
 import { Transaction, TransactionType } from '../types';
 
 interface AddTransactionModalProps {
@@ -29,8 +30,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [type, setType] = useState<TransactionType>('expense');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCard, setSelectedCard] = useState('Dinheiro');
+  const [paidFor, setPaidFor] = useState('');
+  const [reimbursed, setReimbursed] = useState(false);
 
-  // Combine default cards with user custom cards
   const availableCards = Array.from(new Set([...DEFAULT_CARDS, ...userCustomCards]));
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setType(initialData.type);
         setDate(initialData.date);
         setSelectedCard(initialData.card || 'Dinheiro');
+        setPaidFor(initialData.paidFor || '');
+        setReimbursed(initialData.reimbursed || false);
       } else {
         setDescription('');
         setAmount('');
@@ -49,6 +53,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setType('expense');
         setDate(new Date().toISOString().split('T')[0]);
         setSelectedCard('Dinheiro');
+        setPaidFor('');
+        setReimbursed(false);
       }
     }
   }, [isOpen, initialData]);
@@ -63,7 +69,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       category,
       type,
       date,
-      card: selectedCard
+      card: selectedCard,
+      paidFor: paidFor.trim() || undefined,
+      reimbursed: paidFor.trim() ? reimbursed : undefined
     });
   };
 
@@ -157,38 +165,69 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Categoria</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
-            >
-              <option>Alimentação</option>
-              <option>Moradia</option>
-              <option>Transporte</option>
-              <option>Lazer</option>
-              <option>Saúde</option>
-              <option>Salário</option>
-              <option>Investimento</option>
-              <option>Outros</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Categoria</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+              >
+                <option>Alimentação</option>
+                <option>Moradia</option>
+                <option>Transporte</option>
+                <option>Lazer</option>
+                <option>Saúde</option>
+                <option>Salário</option>
+                <option>Investimento</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Meio de Pagamento</label>
+              <select
+                  value={selectedCard}
+                  onChange={(e) => setSelectedCard(e.target.value)}
+                  className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+              >
+                  {availableCards.map(card => (
+                      <option key={card} value={card}>{card}</option>
+                  ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Meio de Pagamento / Cartão</label>
-            <div className="relative">
-                <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
-                <select
-                    value={selectedCard}
-                    onChange={(e) => setSelectedCard(e.target.value)}
-                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
-                >
-                    {availableCards.map(card => (
-                        <option key={card} value={card}>{card}</option>
-                    ))}
-                </select>
+          <div className="space-y-3">
+            <div>
+              <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Pago para quem? (Opcional)</label>
+              <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                  <input
+                      type="text"
+                      value={paidFor}
+                      onChange={(e) => setPaidFor(e.target.value)}
+                      className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                      placeholder="Ex: João, Amigo, Trabalho"
+                  />
+              </div>
             </div>
+
+            {paidFor.trim() && (
+                <div className="animate-in slide-in-from-top-2 duration-300">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/30 cursor-pointer hover:border-emerald-500/50 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={reimbursed}
+                            onChange={(e) => setReimbursed(e.target.checked)}
+                            className={`w-5 h-5 rounded border-slate-700 text-${themeColor}-500 focus:ring-${themeColor}-500`}
+                        />
+                        <div>
+                            <p className={`text-sm font-bold ${styles.textHead}`}>Já recebi o pagamento?</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Marcar como reembolsado</p>
+                        </div>
+                    </label>
+                </div>
+            )}
           </div>
 
           <button

@@ -149,6 +149,28 @@ export const MarketTab: React.FC<MarketTabProps> = ({ themeColor, isDarkMode }) 
               </div>
             ))}
           </div>
+
+          {/* Renderização de Fontes de Grounding para transparência e conformidade com as diretrizes da API Gemini Search */}
+          {data?.sources && data.sources.length > 0 && (
+            <div className="mt-8 px-2 animate-in fade-in duration-700">
+               <h4 className={`${styles.textHead} text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2`}>
+                  <LinkIcon size={14} className="text-emerald-500" /> Fontes de Verificação
+               </h4>
+               <div className="flex flex-wrap gap-2">
+                  {data.sources.map((src, i) => (
+                     <a 
+                        key={i} 
+                        href={src.uri} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className={`text-[9px] font-black uppercase tracking-tight px-3 py-1.5 rounded-lg border ${styles.itemBg} ${styles.textMuted} hover:text-emerald-500 hover:border-emerald-500/30 transition-all flex items-center gap-1.5`}
+                     >
+                        {src.title} <ExternalLink size={10} />
+                     </a>
+                  ))}
+               </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

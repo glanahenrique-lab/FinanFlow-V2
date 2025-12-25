@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard } from 'lucide-react';
+import { X, CreditCard, User } from 'lucide-react';
 import { InstallmentPurchase } from '../types';
 
 interface AddInstallmentModalProps {
@@ -25,13 +26,13 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
   const [totalAmount, setTotalAmount] = useState('');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paidFor, setPaidFor] = useState('');
+  const [reimbursed, setReimbursed] = useState(false);
   
-  // Card State
   const [selectedCard, setSelectedCard] = useState('Nubank');
   const [customCardName, setCustomCardName] = useState('');
   const [saveCustomCard, setSaveCustomCard] = useState(false);
 
-  // Combine default cards with user custom cards
   const availableCards = Array.from(new Set([...DEFAULT_CARDS, ...userCustomCards]));
 
   useEffect(() => {
@@ -43,6 +44,8 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
       setSelectedCard('Nubank');
       setCustomCardName('');
       setSaveCustomCard(false);
+      setPaidFor('');
+      setReimbursed(false);
     }
   }, [isOpen]);
 
@@ -50,9 +53,7 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     const finalCardName = selectedCard === 'Outro' ? customCardName : selectedCard;
-
     if (selectedCard === 'Outro' && !finalCardName.trim()) {
         alert("Por favor, digite o nome do cartão.");
         return;
@@ -64,7 +65,9 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
       totalInstallments: Number(totalInstallments),
       paidInstallments: 0,
       purchaseDate,
-      card: finalCardName
+      card: finalCardName,
+      paidFor: paidFor.trim() || undefined,
+      reimbursed: paidFor.trim() ? reimbursed : undefined
     }, saveCustomCard && selectedCard === 'Outro');
     
     onClose();
@@ -94,7 +97,7 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl transition-colors duration-300 flex flex-col max-h-[90vh]`}>
+      <div className={`${styles.bg} border ${styles.border} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col max-h-[90vh]`}>
         <div className={`flex justify-between items-center p-6 border-b ${styles.border}`}>
           <h2 className={`text-xl font-bold ${styles.textHead}`}>Nova Compra Parcelada</h2>
           <button onClick={onClose} className={`text-slate-400 ${styles.closeHover} transition-colors`}>
@@ -115,48 +118,35 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
             />
           </div>
 
-          {/* Seleção de Cartão */}
           <div>
-            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Meio de Pagamento / Cartão</label>
+            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Pago para quem? (Opcional)</label>
             <div className="relative">
-                <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
-                <select
-                    value={selectedCard}
-                    onChange={(e) => setSelectedCard(e.target.value)}
-                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
-                >
-                    {availableCards.map(card => (
-                        <option key={card} value={card}>{card}</option>
-                    ))}
-                    <option value="Outro">Outro (Criar novo)</option>
-                </select>
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                <input
+                    type="text"
+                    value={paidFor}
+                    onChange={(e) => setPaidFor(e.target.value)}
+                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none`}
+                    placeholder="Ex: Amigo, Mãe, Trabalho"
+                />
             </div>
+            {paidFor.trim() && (
+                <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
+                    <label className={`flex items-center gap-3 p-3 rounded-xl border border-dashed ${isDarkMode ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-emerald-500/50 transition-colors`}>
+                        <input
+                            type="checkbox"
+                            checked={reimbursed}
+                            onChange={(e) => setReimbursed(e.target.checked)}
+                            className={`w-5 h-5 rounded border-slate-700 text-${themeColor}-500 focus:ring-${themeColor}-500`}
+                        />
+                        <div>
+                            <p className={`text-sm font-bold ${styles.textHead}`}>A pessoa já me pagou tudo?</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Controle de reembolso total</p>
+                        </div>
+                    </label>
+                </div>
+            )}
           </div>
-
-          {selectedCard === 'Outro' && (
-              <div className="animate-in slide-in-from-top-2 duration-300 space-y-2 bg-black/5 p-3 rounded-xl border border-black/5">
-                  <div>
-                    <label className={`block text-xs font-medium ${styles.textLabel} mb-1`}>Nome do Cartão</label>
-                    <input
-                        required
-                        type="text"
-                        value={customCardName}
-                        onChange={(e) => setCustomCardName(e.target.value)}
-                        className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-3 py-2 text-sm ${styles.inputText} focus:ring-1 focus:ring-${themeColor}-500 outline-none`}
-                        placeholder="Ex: XP Visa Infinite"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={saveCustomCard}
-                        onChange={(e) => setSaveCustomCard(e.target.checked)}
-                        className={`w-4 h-4 rounded ${styles.inputBg} ${styles.checkboxBorder} text-${themeColor}-600 focus:ring-${themeColor}-500`}
-                      />
-                      <span className={`text-xs ${styles.textLabel}`}>Salvar na minha lista de cartões?</span>
-                  </label>
-              </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -196,6 +186,48 @@ export const AddInstallmentModal: React.FC<AddInstallmentModalProps> = ({
                 placeholder="Ex: 10"
               />
           </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${styles.textLabel} mb-1`}>Cartão utilizado</label>
+            <div className="relative">
+                <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 text-${themeColor}-500`} size={18} />
+                <select
+                    value={selectedCard}
+                    onChange={(e) => setSelectedCard(e.target.value)}
+                    className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg pl-10 pr-4 py-2.5 ${styles.inputText} focus:ring-2 focus:ring-${themeColor}-500 outline-none appearance-none`}
+                >
+                    {availableCards.map(card => (
+                        <option key={card} value={card}>{card}</option>
+                    ))}
+                    <option value="Outro">Outro (Criar novo)</option>
+                </select>
+            </div>
+          </div>
+
+          {selectedCard === 'Outro' && (
+              <div className="animate-in slide-in-from-top-2 duration-300 space-y-2 bg-black/5 p-3 rounded-xl border border-black/5">
+                  <div>
+                    <label className={`block text-xs font-medium ${styles.textLabel} mb-1`}>Nome do Cartão</label>
+                    <input
+                        required
+                        type="text"
+                        value={customCardName}
+                        onChange={(e) => setCustomCardName(e.target.value)}
+                        className={`w-full ${styles.inputBg} border ${styles.inputBorder} rounded-lg px-3 py-2 text-sm ${styles.inputText} focus:ring-1 focus:ring-${themeColor}-500 outline-none`}
+                        placeholder="Ex: XP Visa Infinite"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={saveCustomCard}
+                        onChange={(e) => setSaveCustomCard(e.target.checked)}
+                        className={`w-4 h-4 rounded ${styles.inputBg} ${styles.checkboxBorder} text-${themeColor}-600 focus:ring-${themeColor}-500`}
+                      />
+                      <span className={`text-xs ${styles.textLabel}`}>Salvar na minha lista de cartões?</span>
+                  </label>
+              </div>
+          )}
 
           <button
             type="submit"

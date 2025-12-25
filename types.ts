@@ -1,3 +1,4 @@
+
 export type TransactionType = 'income' | 'expense';
 
 export interface UserProfile {
@@ -25,6 +26,8 @@ export interface Transaction {
   isInstallment?: boolean;
   installmentInfo?: string;
   card?: string;
+  paidFor?: string; // Nome da pessoa para quem o gasto foi feito
+  reimbursed?: boolean; // Se o terceiro já pagou de volta
 }
 
 export interface InstallmentPurchase {
@@ -38,6 +41,8 @@ export interface InstallmentPurchase {
   lastPaymentDate?: string; // ISO string - Data do último pagamento realizado
   delayedMonths?: string[]; // Array de Strings "MM-YYYY" - Meses que foram pulados/adiados
   card?: string; // Nome do cartão utilizado
+  paidFor?: string; // Nome da pessoa para quem o gasto foi feito
+  reimbursed?: boolean; // Se o terceiro já pagou de volta
 }
 
 export interface FinancialGoal {
