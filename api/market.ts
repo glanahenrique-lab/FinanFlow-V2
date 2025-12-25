@@ -17,7 +17,6 @@ export default async function handler(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Response Schema rigoroso
     const schema = {
       type: Type.OBJECT,
       properties: {
@@ -49,13 +48,12 @@ export default async function handler(request: Request) {
       required: ["indices", "news"]
     };
 
-    // Usando gemini-3-flash-preview com Search Grounding conforme as regras
+    // Usando gemini-3-flash-preview conforme as diretrizes para tarefas de busca
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um boletim informativo financeiro REAL-TIME para hoje (${new Date().toLocaleDateString('pt-BR')}).
-      1. Pesquise os valores ATUAIS de: Ibovespa, Dólar Comercial, Euro, Bitcoin e S&P 500.
-      2. Pesquise e resuma as 3 notícias de economia mais impactantes no Brasil nas últimas 12 horas.
-      Responda estritamente no formato JSON definido.`,
+      contents: `PESQUISA OBRIGATÓRIA: Busque valores reais de HOJE (${new Date().toLocaleDateString('pt-BR')}) para: Ibovespa, Dólar Comercial, Euro, Bitcoin (R$) e S&P 500. 
+      Além disso, encontre as 3 notícias financeiras MAIS RECENTES do Brasil. 
+      Retorne estritamente o JSON definido pelo esquema.`,
       config: {
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
@@ -64,27 +62,23 @@ export default async function handler(request: Request) {
     });
 
     let text = response.text || "";
-    // Limpeza de redundância Markdown
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    if (!text) {
-      throw new Error("Modelo não retornou dados.");
-    }
+    if (!text) throw new Error("Vazio");
 
     const data = JSON.parse(text);
 
-    // Grounding Chunks para os links das fontes
     const groundingChunks = (response.candidates?.[0] as any)?.groundingMetadata?.groundingChunks || [];
     const sources = groundingChunks
       .map((chunk: any) => ({
-        title: chunk.web?.title || "Fonte de Notícia",
+        title: chunk.web?.title || "Referência Mercado",
         uri: chunk.web?.uri
       }))
       .filter((s: any) => s.uri);
 
     return new Response(JSON.stringify({ 
       ...data, 
-      sources: sources.slice(0, 4),
+      sources: sources.slice(0, 5),
       timestamp: new Date().toISOString() 
     }), {
       status: 200,
@@ -92,21 +86,27 @@ export default async function handler(request: Request) {
     });
 
   } catch (error) {
-    console.error("API Market Error:", error);
-    // FALLBACK INTELIGENTE (Simula dados se a busca falhar por limites de API)
+    console.error("Market API Error - Triggering Fallback");
+    // Fallback estruturado para não deixar a tela em branco
     return new Response(JSON.stringify({ 
-      error: 'Rede instável. Recarregue em instantes.',
+      error: 'Rede global instável. Tentando reconectar os sensores do radar...',
       indices: [
         { name: "Ibovespa", value: "---", change: "0%" },
         { name: "Dólar", value: "---", change: "0%" },
-        { name: "Bitcoin", value: "---", change: "0%" }
+        { name: "Bitcoin", value: "---", change: "0%" },
+        { name: "Euro", value: "---", change: "0%" },
+        { name: "S&P 500", value: "---", change: "0%" }
       ], 
       news: [
-        { title: "Sincronização em andamento", summary: "A Foxy está ajustando os links com o mercado global. Tente atualizar o radar em alguns segundos.", source: "FinanFlow AI" }
+        { 
+          title: "Sincronizando Boletim de Notícias", 
+          summary: "A Foxy está vasculhando os portais de economia. Tente atualizar o radar em alguns segundos para receber os dados frescos.", 
+          source: "FinanFlow AI" 
+        }
       ], 
       sources: [] 
     }), { 
-      status: 200,
+      status: 200, 
       headers: { 'Content-Type': 'application/json' } 
     });
   }

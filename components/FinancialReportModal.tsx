@@ -1,5 +1,7 @@
+
 import React from 'react';
-import { X, PieChart as PieIcon, TrendingUp, AlertTriangle, Target, Lightbulb } from 'lucide-react';
+/* Fixed: Added missing Sparkles import from lucide-react */
+import { X, PieChart as PieIcon, TrendingUp, AlertTriangle, Target, Lightbulb, ShieldCheck, Zap, BarChart3, Activity, Sparkles } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface FinancialReportModalProps {
@@ -42,82 +44,92 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
   };
 
   const styles = isDarkMode ? {
-    bg: 'bg-slate-900',
+    bg: 'bg-slate-950',
     border: 'border-slate-800',
-    headerBg: 'bg-slate-900',
+    headerBg: 'bg-slate-900/50',
     textHead: 'text-white',
     textMuted: 'text-slate-400',
     textBody: 'text-slate-300',
-    cardBg: 'bg-slate-950',
-    cardBorder: 'border-slate-800',
-    sectionBg: 'bg-slate-800/50',
-    sectionBorder: 'border-slate-700',
+    cardBg: 'bg-slate-900/40',
+    cardBorder: 'border-slate-800/60',
+    sectionBg: 'bg-slate-900/60',
+    sectionBorder: 'border-slate-800',
     closeBg: 'bg-slate-800',
     closeHover: 'hover:text-white',
-    chartTooltipBg: '#1e293b',
-    chartTooltipBorder: '#334155',
-    chartText: '#f1f5f9',
   } : {
-    bg: 'bg-white',
+    bg: 'bg-slate-50',
     border: 'border-slate-200',
-    headerBg: 'bg-slate-50',
+    headerBg: 'bg-white',
     textHead: 'text-slate-900',
     textMuted: 'text-slate-500',
     textBody: 'text-slate-700',
-    cardBg: 'bg-slate-50',
+    cardBg: 'bg-white',
     cardBorder: 'border-slate-200',
-    sectionBg: 'bg-slate-50',
+    sectionBg: 'bg-white',
     sectionBorder: 'border-slate-200',
     closeBg: 'bg-slate-200',
     closeHover: 'hover:text-slate-900',
-    chartTooltipBg: '#ffffff',
-    chartTooltipBorder: '#e2e8f0',
-    chartText: '#1e293b',
   };
 
-  // Função simples para formatar o texto da IA em seções visuais
   const renderAnalysisContent = () => {
     if (isAnalyzing) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <div className={`w-16 h-16 border-4 border-${themeColor}-500 border-t-transparent rounded-full animate-spin`}></div>
-                <p className={`text-${themeColor}-400 font-medium animate-pulse text-lg`}>Consultando a IA...</p>
-                <p className={styles.textMuted + " text-sm"}>Analisando gastos, parcelas e metas.</p>
+            <div className="flex flex-col items-center justify-center py-20 space-y-8">
+                <div className="relative">
+                    <div className={`w-20 h-20 border-4 border-${themeColor}-500/20 border-t-${themeColor}-500 rounded-full animate-spin`}></div>
+                    <Activity className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-${themeColor}-500 animate-pulse`} size={32} />
+                </div>
+                <div className="text-center">
+                    <p className={`text-xl font-black ${styles.textHead} uppercase tracking-tighter`}>Processando Neurônios Financeiros</p>
+                    <p className={`${styles.textMuted} text-xs font-bold uppercase tracking-[0.2em] mt-2`}>Foxy está calculando seu score de saúde...</p>
+                </div>
             </div>
         );
     }
 
     if (!aiAnalysis) return null;
 
-    // Divide o texto baseado nos cabeçalhos esperados do prompt
-    const sections = aiAnalysis.split(/\d\.\s/); 
+    // Split by numeric headers like "1. ", "2. ", etc.
+    const sections = aiAnalysis.split(/\n(?=\d\.\s)/); 
     
-    // Mapeamento de ícones para seções (heurística simples)
-    const getIconForSection = (text: string) => {
-        if (text.includes('gastou') || text.includes('Gastos')) return <TrendingUp className="text-red-400" />;
-        if (text.includes('melhorar') || text.includes('Melhoria')) return <AlertTriangle className="text-orange-400" />;
-        if (text.includes('Metas')) return <Target className="text-teal-400" />;
-        if (text.includes('Renda') || text.includes('Extra')) return <Lightbulb className="text-yellow-400" />;
-        return <PieIcon className={`text-${themeColor}-400`} />;
+    const getIconAndColor = (text: string) => {
+        if (text.includes('SCORE')) return { icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+        if (text.includes('50/30/20')) return { icon: BarChart3, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+        if (text.includes('RISCO')) return { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' };
+        if (text.includes('AÇÃO')) return { icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+        if (text.includes('INVESTIMENTOS')) return { icon: TrendingUp, color: 'text-indigo-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' };
+        return { icon: Lightbulb, color: `text-${themeColor}-500`, bg: `bg-${themeColor}-500/10`, border: `border-${themeColor}-500/20` };
     };
 
     return (
-        <div className={`space-y-6 ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>
+        <div className={`space-y-6 pb-12 ${isPrivacyMode ? 'blur-md select-none' : ''}`}>
             {sections.map((section, index) => {
                 if (!section.trim()) return null;
-                // Tenta extrair um título da primeira linha
                 const lines = section.trim().split('\n');
-                const title = lines[0];
+                const titleLine = lines[0];
                 const content = lines.slice(1).join('\n');
+                const style = getIconAndColor(titleLine.toUpperCase());
+                const Icon = style.icon;
 
                 return (
-                    <div key={index} className={`${styles.sectionBg} border ${styles.sectionBorder} rounded-xl p-5 hover:border-${themeColor}-500/30 transition-colors`}>
-                        <h3 className={`text-lg font-bold ${styles.textHead} mb-3 flex items-center gap-2`}>
-                            {getIconForSection(title)}
-                            {title.replace(/[:|📊|💡|🎯|🚀]/g, '').trim()}
-                        </h3>
-                        <div className={`${styles.textBody} text-sm whitespace-pre-wrap leading-relaxed`}>
-                            {content}
+                    <div key={index} className={`${styles.sectionBg} border ${style.border} rounded-[2rem] p-6 sm:p-8 shadow-sm transition-all hover:scale-[1.01]`}>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className={`p-3 rounded-2xl ${style.bg} ${style.color}`}>
+                                <Icon size={24} />
+                            </div>
+                            <h3 className={`text-lg font-black ${styles.textHead} uppercase tracking-tighter`}>
+                                {titleLine.replace(/^\d\.\s/, '').trim()}
+                            </h3>
+                        </div>
+                        <div className={`${styles.textBody} text-sm whitespace-pre-wrap leading-relaxed font-medium`}>
+                            {content.split('- ').map((item, i) => (
+                                item.trim() ? (
+                                    <div key={i} className="flex gap-3 mb-3 group">
+                                        <div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${style.color} group-hover:scale-150 transition-transform`}></div>
+                                        <span>{item}</span>
+                                    </div>
+                                ) : null
+                            ))}
                         </div>
                     </div>
                 );
@@ -127,116 +139,83 @@ export const FinancialReportModal: React.FC<FinancialReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className={`${styles.bg} border ${styles.border} rounded-3xl w-full max-w-5xl h-[90vh] shadow-2xl flex flex-col overflow-hidden transition-colors duration-300`}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+      <div className={`${styles.bg} border ${styles.border} rounded-[3rem] w-full max-w-6xl h-[92vh] shadow-2xl flex flex-col overflow-hidden transition-colors duration-500`}>
         
         {/* Header */}
-        <div className={`flex justify-between items-center p-6 border-b ${styles.border} ${styles.headerBg}`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 bg-${themeColor}-600 rounded-lg text-white`}>
-                <PieIcon size={24} />
+        <div className={`flex justify-between items-center p-6 sm:p-8 border-b ${styles.border} ${styles.headerBg} relative overflow-hidden`}>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+          <div className="flex items-center gap-4 relative z-10">
+            <div className={`p-3 bg-${themeColor}-600 rounded-2xl text-white shadow-lg`}>
+                <Activity size={28} />
             </div>
             <div>
-                <h2 className={`text-2xl font-bold ${styles.textHead}`}>Relatório Financeiro Inteligente</h2>
-                <p className={`text-sm ${styles.textMuted}`}>Análise de dados + Sugestões da IA</p>
+                <h2 className={`text-2xl sm:text-3xl font-black ${styles.textHead} tracking-tight uppercase`}>Check-up Financeiro</h2>
+                <p className={`${styles.textMuted} text-[10px] font-black uppercase tracking-[0.2em]`}>Inteligência Analítica Foxy V3.5</p>
             </div>
           </div>
-          <button onClick={onClose} className={`p-2 ${styles.closeBg} hover:opacity-80 rounded-full text-slate-500 ${styles.closeHover} transition-colors`}>
+          <button onClick={onClose} className={`p-3 ${styles.closeBg} hover:opacity-80 rounded-2xl text-slate-500 ${styles.closeHover} transition-all active:scale-90 relative z-10`}>
             <X size={24} />
           </button>
         </div>
         
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
-                {/* Left Column: Visuals */}
-                <div className="space-y-6">
-                    {/* Pie Chart Card */}
-                    <div className={`${styles.cardBg} border ${styles.cardBorder} rounded-2xl p-6 shadow-lg`}>
-                        <h3 className={`${styles.textHead} font-semibold mb-6 text-center`}>Distribuição de Gastos do Mês</h3>
-                        <div className="h-[300px] w-full">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={80}
-                                        outerRadius={110}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {chartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        formatter={(value: number) => formatValue(value)}
-                                        contentStyle={{ backgroundColor: styles.chartTooltipBg, borderColor: styles.chartTooltipBorder, borderRadius: '8px', color: styles.chartText }}
-                                        itemStyle={{ color: styles.chartText }}
-                                    />
-                                </PieChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className={`h-full flex items-center justify-center ${styles.textMuted}`}>Sem dados suficientes</div>
-                            )}
-                        </div>
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            {chartData.map((entry, index) => (
-                                <div key={index} className={`flex items-center gap-2 text-xs ${styles.textMuted}`}>
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                    <span className="truncate flex-1">{entry.name}</span>
-                                    <span className={`font-bold ${styles.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>
-                                        {formatValue(entry.value)}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Bar Chart Comparison */}
-                    <div className={`${styles.cardBg} border ${styles.cardBorder} rounded-2xl p-6 shadow-lg`}>
-                        <h3 className={`${styles.textHead} font-semibold mb-6 text-center`}>Balanço: Receitas vs Despesas</h3>
-                        <div className="h-[200px] w-full">
+                {/* Visual Stats Column */}
+                <div className="lg:col-span-4 space-y-6">
+                    <div className={`${styles.cardBg} border ${styles.cardBorder} rounded-[2.5rem] p-6 shadow-sm`}>
+                        <h3 className={`${styles.textHead} text-[10px] font-black uppercase tracking-widest mb-6 text-center opacity-60`}>Fluxo de Caixa</h3>
+                        <div className="h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={comparisonData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#e2e8f0'} horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={80} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b'}} />
+                                <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: isDarkMode ? '#94a3b8' : '#64748b', fontWeight: 'bold', fontSize: 10}} />
                                     <Tooltip 
                                         cursor={{fill: 'transparent'}}
-                                        formatter={(value: number) => formatValue(value)}
-                                        contentStyle={{ backgroundColor: styles.chartTooltipBg, borderColor: styles.chartTooltipBorder, borderRadius: '8px', color: styles.chartText }}
-                                        itemStyle={{ color: styles.chartText }}
+                                        contentStyle={{ backgroundColor: isDarkMode ? '#0f172a' : '#fff', borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}
                                     />
-                                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                                    <Bar dataKey="amount" radius={[8, 8, 8, 8]} barSize={40}>
                                         {comparisonData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.name === 'Receitas' ? '#10b981' : '#ef4444'} />
+                                            <Cell key={`cell-${index}`} fill={entry.name === 'Receitas' ? '#10b981' : '#f43f5e'} />
                                         ))}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
+
+                    <div className={`${styles.cardBg} border ${styles.cardBorder} rounded-[2.5rem] p-6 shadow-sm`}>
+                        <h3 className={`${styles.textHead} text-[10px] font-black uppercase tracking-widest mb-6 text-center opacity-60`}>Categorias Críticas</h3>
+                        <div className="h-[220px] w-full">
+                            {chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} cornerRadius={10} dataKey="value" stroke="none">
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className={`h-full flex items-center justify-center ${styles.textMuted} text-xs font-bold uppercase`}>Dados Insuficientes</div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right Column: AI Content */}
-                <div>
-                     <div className="sticky top-0">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className={`text-xl font-bold text-${themeColor}-400`}>Análise do Consultor IA</h3>
-                            {!isAnalyzing && aiAnalysis && (
-                                <span className={`text-xs bg-${themeColor}-500/20 text-${themeColor}-500 px-3 py-1 rounded-full border border-${themeColor}-500/30`}>
-                                    Atualizado agora
-                                </span>
-                            )}
+                {/* AI Report Column */}
+                <div className="lg:col-span-8">
+                     <div className="relative">
+                        <div className="flex items-center gap-3 mb-6">
+                            <Sparkles className="text-amber-500" size={20} />
+                            <h3 className={`text-xl font-black ${styles.textHead} uppercase tracking-tighter`}>Diagnóstico da Inteligência</h3>
                         </div>
                         {renderAnalysisContent()}
                      </div>
                 </div>
-
             </div>
         </div>
       </div>

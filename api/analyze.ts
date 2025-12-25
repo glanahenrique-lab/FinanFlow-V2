@@ -2,56 +2,58 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const config = {
-  runtime: 'edge', // Opcional: usa edge function para resposta mais rápida
+  runtime: 'edge',
 };
 
 export default async function handler(request: Request) {
-  // 1. Verificação de Método
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
-  // 2. SEGURANÇA: Verificação de Origem (Origin/Referer Check)
-  // Adicione aqui os domínios permitidos (localhost para dev, seus domínios de produção)
-  const origin = request.headers.get('origin') || request.headers.get('referer');
-  const allowedOrigins = [
-    'http://localhost:5173', // Vite Default Port
-    'http://127.0.0.1:5173',
-    // Adicione seu domínio de produção aqui quando fizer deploy
-    // 'https://seu-projeto.vercel.app' 
-  ];
-
-  // Se a origem existir e não estiver na lista (e não for nula, pois algumas chamadas backend-to-backend podem não ter), bloqueia.
-  // Nota: Em dev local às vezes o origin pode vir null dependendo do client, mas em browser moderno geralmente vem.
-  // Para ser permissivo em dev, você pode comentar esse bloco se tiver problemas, mas em produção é essencial.
-  if (origin && !allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-     // return new Response(JSON.stringify({ error: 'Forbidden: Invalid Origin' }), { status: 403 });
-  }
-
   try {
-    const { prompt } = await request.json();
+    const body = await request.json();
+    const { prompt } = body;
+
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: 'Prompt não fornecido' }), { status: 400 });
+    }
 
     if (!process.env.API_KEY) {
       return new Response(JSON.stringify({ error: 'API_KEY não configurada no servidor' }), { status: 500 });
     }
 
-    // Initialize the Google GenAI client with the API key from environment variables
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // FIX: Use gemini-3-flash-preview as recommended for basic text/reasoning tasks
+    // Upgrade para o modelo Pro para análise financeira complexa e raciocínio lógico
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
+      config: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40
+      }
     });
 
-    // Access the extracted string output directly from the .text property
-    return new Response(JSON.stringify({ text: response.text }), {
+    const textOutput = response.text;
+
+    if (!textOutput) {
+      throw new Error("O modelo retornou uma resposta vazia.");
+    }
+
+    return new Response(JSON.stringify({ text: textOutput }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
-    console.error("Erro na API Vercel:", error);
-    return new Response(JSON.stringify({ error: 'Erro ao processar solicitação' }), { status: 500 });
+  } catch (error: any) {
+    console.error("Erro na API de Análise:", error);
+    return new Response(JSON.stringify({ 
+      error: 'Erro ao processar análise',
+      details: error.message 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

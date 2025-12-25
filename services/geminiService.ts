@@ -1,3 +1,4 @@
+
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment } from "../types";
 
 export const getFinancialAdvice = async (
@@ -8,60 +9,69 @@ export const getFinancialAdvice = async (
   investments: Investment[]
 ): Promise<string> => {
   
-  // Construímos o prompt aqui no cliente, mas enviamos para o servidor processar
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome * 100).toFixed(1) : "0";
+
   const prompt = `
-    Atue como um consultor financeiro pessoal de elite. Analise os dados fornecidos e gere um RELATÓRIO ESTRUTURADO.
-    
-    DADOS DO USUÁRIO:
-    - Transações do Mês (Gastos/Receitas): ${JSON.stringify(transactions)}
-    - Parcelamentos Ativos: ${JSON.stringify(installments)}
-    - Metas Financeiras: ${JSON.stringify(goals)}
-    - Assinaturas Fixas: ${JSON.stringify(subscriptions)}
-    - Investimentos Realizados: ${JSON.stringify(investments)}
+    Atue como um Especialista em Finanças Comportamentais e Gestor de Patrimônio. 
+    Analise o ecossistema financeiro do usuário e gere um DIAGNÓSTICO ESTRUTURADO.
 
-    Gere a resposta EXATAMENTE com os seguintes 4 Tópicos (use emojis nos títulos):
+    DADOS CRÍTICOS:
+    - Receita Total: R$ ${totalIncome}
+    - Despesa Total: R$ ${totalExpense}
+    - Taxa de Poupança Atual: ${savingsRate}%
+    - Transações Detalhadas: ${JSON.stringify(transactions.slice(0, 20))}
+    - Compromissos Parcelados: ${JSON.stringify(installments)}
+    - Objetivos: ${JSON.stringify(goals)}
+    - Custos Fixos (Assinaturas): ${JSON.stringify(subscriptions)}
+    - Carteira de Ativos: ${JSON.stringify(investments)}
 
-    1. 📊 Onde você mais gastou
-    - Identifique a categoria vilã e o maior gasto individual.
-    - Mostre a porcentagem aproximada do gasto total.
+    Gere o relatório seguindo RIGOROSAMENTE esta estrutura (use Markdown para negritos e listas):
 
-    2. 💡 O que precisa melhorar
-    - Sugira cortes específicos baseados nos dados (ex: "Assinaturas somam X", "Gasto alto em Lazer").
-    - Dê uma dica prática de economia imediata.
+    1. 🎯 SCORE DE SAÚDE FINANCEIRA
+    - Atribua uma nota de 0 a 100.
+    - Justificativa técnica (Ex: "Sua taxa de poupança de X% está [acima/abaixo] da média de mercado").
 
-    3. 🎯 Sugestões para atingir as Metas
-    - Analise se o ritmo de economia atual é suficiente para as metas cadastradas.
-    - Sugira um valor mensal exato para aportar.
+    2. ⚖️ DIAGNÓSTICO 50/30/20
+    - Estime como os gastos se dividem em: Necessidades (Essencial), Desejos (Lazer/Assinaturas) e Investimentos.
+    - Indique qual pilar está desequilibrado.
 
-    4. 🚀 Ideias de Renda Extra
-    - Baseado no perfil de gastos (se gasta muito, precisa ganhar mais), sugira 2 ou 3 formas genéricas de renda extra que poderiam ajudar a cobrir o "buraco" no orçamento ou acelerar os investimentos.
+    3. ⚠️ ALERTAS DE RISCO E VAZAMENTOS
+    - Identifique "gastos fantasma" ou padrões de consumo impulsivo.
+    - Analise o peso das parcelas no orçamento mensal (Comprometimento de Renda).
+
+    4. 🛠️ PLANO DE AÇÃO (PRÓXIMOS 30 DIAS)
+    - 3 passos práticos e imediatos para melhorar o saldo ou acelerar uma meta específica.
+    - Sugestão de aporte ideal para a meta mais próxima de ser atingida.
+
+    5. 📈 INSIGHT DE INVESTIMENTOS
+    - Analise a diversificação (Renda Fixa vs Variável).
+    - Sugira um rebalanceamento caso a carteira esteja muito concentrada.
 
     Diretrizes:
-    - Use Português do Brasil.
-    - Seja direto, motivador, mas realista.
-    - Use formatação com quebras de linha claras para facilitar a leitura.
-    - Não use Markdown complexo (como tabelas), use listas com bullet points.
+    - Linguagem executiva, porém acolhedora (Foxy Persona).
+    - Não repita dados que o usuário já vê no dashboard.
+    - Foque em ANALISAR o porquê dos números.
   `;
 
   try {
-    // Agora chamamos nossa própria API na Vercel, que é segura
     const response = await fetch('/api/analyze', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
-      throw new Error(`Erro na requisição: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.details || `Erro HTTP ${response.status}`);
     }
-
+    
     const data = await response.json();
-    return data.text || "Não foi possível gerar uma análise no momento.";
+    return data.text || "Não foi possível processar a análise profunda agora.";
 
-  } catch (error) {
-    console.error("Erro ao obter conselho financeiro:", error);
-    return "Ocorreu um erro ao tentar conectar com o consultor inteligente. Tente novamente mais tarde.";
+  } catch (error: any) {
+    console.error("Erro no Consultor IA:", error);
+    return `### ⚠️ Falha na Conexão\n\nOs sensores da Foxy detectaram uma interferência: ${error.message}. Verifique sua conexão ou tente novamente em alguns instantes.`;
   }
 };

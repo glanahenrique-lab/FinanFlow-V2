@@ -62,7 +62,7 @@ import {
   Area
 } from 'recharts';
 import { onAuthStateChanged, signOut, updateProfile, deleteUser, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, setDoc, writeBatch, arrayUnion, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './services/firebase';
 import { AuthPage } from './components/AuthPage';
 import { Transaction, InstallmentPurchase, FinancialGoal, Subscription, Investment, GoalTransaction, InvestmentTransaction, UserProfile } from './types';
@@ -243,8 +243,8 @@ function App() {
   });
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [selectedInvestmentId, setSelectedInvestmentId] = useState<string | null>(null);
-  const [confirmState, setConfirmState] = useState<{ isOpen: boolean; type: string | null; id: string | null; title: string; message: string; }>({
-    isOpen: false, type: null, id: null, title: '', message: ''
+  const [confirmState, setConfirmState] = useState<{ isOpen: boolean; type: string | null; id: string | null; title: string; message: string; data?: any; }>({
+    isOpen: false, type: null, id: null, title: '', message: '', data: null
   });
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -519,7 +519,7 @@ function App() {
       ...monthlySubscriptionTransactions
   ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // LÓGICA DE GASTOS POR CARTÃO
+  // LÓGICA DE GASTOS POR CARTÃO (MAPA DE CRÉDITO)
   const cardTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     allTransactions.forEach(t => {
@@ -574,19 +574,64 @@ function App() {
     return { name: cat, value };
   }).filter(d => d.value > 0).sort((a, b) => Number(b.value) - Number(a.value));
 
-  const handleDelete = async (id: string, type: string) => {
-    setConfirmState({ isOpen: true, type, id, title: `Excluir ${type}?`, message: 'Essa ação não pode ser desfeita.' });
+  const handleDelete = async (id: string, type: string, data?: any) => {
+    setConfirmState({ isOpen: true, type, id, title: `Excluir ${type}?`, message: 'Essa ação apagará o registro e sincronizará os saldos.', data });
   };
 
   const confirmDelete = async () => {
-    const { type, id } = confirmState;
-    if (!id) return;
-    if (type === 'Movimentação') await deleteData('transactions', id);
+    const { type, id, data } = confirmState;
+    if (!id || !currentUser) return;
+    const uid = currentUser.uid;
+
+    if (type === 'Movimentação') {
+        const trans = transactions.find(t => t.id === id);
+        // Lógica de sincronização reversa: se apagar no fluxo, ajusta no Ativo/Meta
+        if (trans && (trans.category === 'Investimentos' || trans.category === 'Metas')) {
+             const isAporte = trans.type === 'expense';
+             const descPart = trans.description.split(': ')[1]; 
+             
+             if (trans.category === 'Investimentos') {
+                 const inv = investments.find(i => i.name === descPart);
+                 if (inv) {
+                     const newAmt = isAporte ? inv.amount - trans.amount : inv.amount + trans.amount;
+                     await saveData('investments', { ...inv, amount: Math.max(0, newAmt) });
+                     // Deletar a transação interna do investimento
+                     const q = query(collection(db, "users", uid, "investment_transactions"), where("investmentId", "==", inv.id), where("amount", "==", trans.amount));
+                     const snap = await getDocs(q); snap.forEach(async doc => await deleteDoc(doc.ref));
+                 }
+             } else if (trans.category === 'Metas') {
+                 const goal = goals.find(g => g.title === descPart);
+                 if (goal) {
+                     const newAmt = isAporte ? goal.currentAmount - trans.amount : goal.currentAmount + trans.amount;
+                     await saveData('goals', { ...goal, currentAmount: Math.max(0, newAmt) });
+                     // Deletar a transação interna da meta
+                     const q = query(collection(db, "users", uid, "goal_transactions"), where("goalId", "==", goal.id), where("amount", "==", trans.amount));
+                     const snap = await getDocs(q); snap.forEach(async doc => await deleteDoc(doc.ref));
+                 }
+             }
+        }
+        await deleteData('transactions', id);
+    }
+    
     if (type === 'Parcelamento') await deleteData('installments', id);
-    if (type === 'Meta') await deleteData('goals', id);
-    if (type === 'Investimento') await deleteData('investments', id);
+    
+    if (type === 'Meta') {
+        // Exclusão em cascata: apaga transações no fluxo ao apagar a meta
+        const related = transactions.filter(t => t.category === 'Metas' && t.description.includes(data?.title));
+        related.forEach(async t => await deleteData('transactions', t.id));
+        await deleteData('goals', id);
+    }
+    
+    if (type === 'Investimento') {
+        // Exclusão em cascata: apaga transações no fluxo ao apagar o investimento
+        const related = transactions.filter(t => t.category === 'Investimentos' && t.description.includes(data?.name));
+        related.forEach(async t => await deleteData('transactions', t.id));
+        await deleteData('investments', id);
+    }
+    
     if (type === 'Assinatura') await deleteData('subscriptions', id);
-    setConfirmState({ isOpen: false, type: null, id: null, title: '', message: '' });
+    
+    setConfirmState({ isOpen: false, type: null, id: null, title: '', message: '', data: null });
   };
 
   const handleUpdateGoalBalance = async (amount: number, type: 'add' | 'remove') => {
@@ -610,9 +655,17 @@ function App() {
   };
 
   const handleGenerateReport = async () => {
-    setIsReportModalOpen(true); setIsAnalyzing(true);
-    const report = await getFinancialAdvice(currentMonthTransactions, installments, goals, subscriptions, investments);
-    setAiAnalysis(report); setIsAnalyzing(false);
+    setIsReportModalOpen(true); 
+    setIsAnalyzing(true);
+    try {
+        const report = await getFinancialAdvice(currentMonthTransactions, installments, goals, subscriptions, investments);
+        setAiAnalysis(report);
+    } catch (error) {
+        console.error("Falha ao gerar relatório:", error);
+        setAiAnalysis("### ❌ Erro Crítico\n\nNão foi possível processar seus dados agora. Tente reduzir o número de transações no mês ou tente novamente mais tarde.");
+    } finally {
+        setIsAnalyzing(false);
+    }
   };
 
   const handleSaveSubscription = async (s: Omit<Subscription, 'id'>) => {
@@ -753,33 +806,33 @@ function App() {
         <button onClick={handleLogoutClick} className="mt-auto mb-8 p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors"><LogOut size={22} /></button>
       </nav>
 
-      {/* MOBILE NAV (DASHBOARD ULTRA-DESTAQUE NO CENTRO) */}
-      <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-lg ${baseTheme.nav} border ${baseTheme.navBorder} z-50 lg:hidden flex justify-between items-center h-22 px-4 rounded-[3rem] shadow-[0_25px_60px_rgba(0,0,0,0.2)] transition-all duration-300`}>
+      {/* MOBILE NAV (DASHBOARD CENTRAL) */}
+      <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-lg ${baseTheme.nav} border ${baseTheme.navBorder} z-50 lg:hidden flex justify-between items-center h-20 px-4 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all duration-300`}>
           {NAV_ITEMS.slice(0, 2).map((item) => {
               const isActive = activeTab === item.id;
               return (
-                  <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isActive ? '-translate-y-1 scale-110' : 'opacity-70'}`}>
+                  <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isActive ? '-translate-y-1 scale-110' : 'opacity-60'}`}>
                       <item.icon size={20} className={isActive ? theme.text : 'text-slate-400'} />
                       <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? theme.text : 'text-slate-400'}`}>{item.label}</span>
                   </button>
               );
           })}
           
-          {/* DASHBOARD CENTRAL XL */}
-          <div className="relative -top-6">
-              <div className={`absolute inset-0 rounded-full blur-xl animate-pulse ${theme.primary} opacity-30`}></div>
+          {/* DASHBOARD CENTRAL - AJUSTADO */}
+          <div className="relative -top-5 group">
+              <div className={`absolute inset-0 rounded-full blur-xl animate-pulse ${theme.primary} opacity-30 scale-125`}></div>
               <button 
                 onClick={() => setActiveTab('dashboard')} 
-                className={`w-18 h-18 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-90 border-4 ${baseTheme.bg} ${activeTab === 'dashboard' ? `bg-gradient-to-br ${theme.gradient} text-white border-${currentTheme}-500/50` : `${baseTheme.card} border-transparent`}`}
+                className={`w-22 h-22 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-90 border-4 ${baseTheme.bg} ${activeTab === 'dashboard' ? `bg-gradient-to-br ${theme.gradient} text-white border-${currentTheme}-500/50` : `${baseTheme.card} border-transparent`}`}
               >
-                  <LayoutGrid size={32} className={activeTab === 'dashboard' ? 'text-white' : theme.text} />
+                  <LayoutGrid size={38} className={activeTab === 'dashboard' ? 'text-white' : theme.text} />
               </button>
           </div>
 
           {NAV_ITEMS.slice(3, 4).map((item) => {
               const isActive = activeTab === item.id;
               return (
-                  <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isActive ? '-translate-y-1 scale-110' : 'opacity-70'}`}>
+                  <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isActive ? '-translate-y-1 scale-110' : 'opacity-60'}`}>
                       <item.icon size={20} className={isActive ? theme.text : 'text-slate-400'} />
                       <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? theme.text : 'text-slate-400'}`}>{item.label}</span>
                   </button>
@@ -787,19 +840,19 @@ function App() {
           })}
 
           <div className="relative">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isMobileMenuOpen ? '-translate-y-1 scale-110' : 'opacity-70'}`}>
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`flex flex-col items-center justify-center gap-1 p-2 transition-all ${isMobileMenuOpen ? '-translate-y-1 scale-110' : 'opacity-60'}`}>
                   <Menu size={20} className={isMobileMenuOpen ? theme.text : 'text-slate-400'} />
                   <span className={`text-[8px] font-black uppercase tracking-tighter ${isMobileMenuOpen ? theme.text : 'text-slate-400'}`}>Mais</span>
               </button>
               {isMobileMenuOpen && (
-                  <div className={`absolute bottom-full right-0 mb-8 w-48 ${baseTheme.menu} border ${baseTheme.border} rounded-[2rem] shadow-2xl p-2 animate-in slide-in-from-bottom-5 zoom-in-95`}>
+                  <div className={`absolute bottom-full right-0 mb-8 w-52 ${baseTheme.menu} border ${baseTheme.border} rounded-[2rem] shadow-2xl p-2 animate-in slide-in-from-bottom-5 zoom-in-95`}>
                       {NAV_ITEMS.slice(4).map((item) => (
-                          <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800`}>
-                              <item.icon size={16} />{item.label}
+                          <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800`}>
+                              <item.icon size={18} />{item.label}
                           </button>
                       ))}
-                      <div className={`h-[1px] w-full my-2 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                      <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 p-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10"><LogOut size={16} /> Sair</button>
+                      <div className={`h-[1px] w-full my-3 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`} />
+                      <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 p-4 rounded-3xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10"><LogOut size={18} /> Sair</button>
                   </div>
               )}
           </div>
@@ -834,8 +887,8 @@ function App() {
                                 <h2 className={`text-3xl lg:text-4xl font-black ${baseTheme.textHead} tracking-tight leading-none`}>
                                     {getGreeting()}
                                 </h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2`}>
-                                    <Zap className={theme.text} size={14} /> Central de Comando
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2`}>
+                                    <Zap className={theme.text} size={14} /> Inteligência de Comando
                                 </p>
                             </div>
                         </div>
@@ -854,6 +907,37 @@ function App() {
                         <SummaryCard title="Saldo Final" value={balance} icon={Wallet} variant={balance < 0 ? 'alert' : 'balance'} formatter={formatCurrency} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} themeColor={currentTheme} />
                     </div>
 
+                    {/* SEÇÃO MAPA DE CRÉDITO (GASTOS POR CARTÃO) */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className={`text-sm lg:text-base font-black ${baseTheme.textHead} flex items-center gap-2 uppercase tracking-widest`}>
+                                <CreditCardIcon className={theme.text} size={18} /> Mapa de Crédito
+                            </h3>
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Soma por Portador</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {cardTotals.length > 0 ? (
+                                cardTotals.map(([cardName, total]) => {
+                                    const isHighlight = cardName.toLowerCase().includes('nubank') || cardName.toLowerCase().includes('inter') || cardName.toLowerCase().includes('xp');
+                                    return (
+                                        <div key={cardName} className={`${baseTheme.card} border ${baseTheme.border} p-5 rounded-[2.5rem] relative overflow-hidden group hover:scale-[1.03] transition-all shadow-sm`}>
+                                            <div className={`absolute top-0 right-0 w-16 h-16 opacity-[0.05] -mr-4 -mt-4 transition-transform group-hover:scale-125`}>
+                                                <CreditCardIcon size={64} className={isHighlight ? theme.text : 'text-slate-400'} />
+                                            </div>
+                                            <p className={`text-[9px] font-black uppercase tracking-widest ${baseTheme.textMuted} mb-1 truncate pr-4`}>{cardName}</p>
+                                            <p className={`text-sm sm:text-base font-black ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>
+                                                {formatCurrency(total)}
+                                            </p>
+                                            <div className={`h-1 w-10 rounded-full mt-3 ${isHighlight ? theme.primary : 'bg-slate-400/30'}`}></div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="col-span-full py-8 text-center opacity-30 italic text-[10px] font-bold uppercase tracking-widest">Nenhum gasto em cartão identificado</div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className={`lg:col-span-2 ${baseTheme.card} border ${baseTheme.border} rounded-[2.5rem] p-6 lg:p-8 shadow-sm flex flex-col h-auto relative overflow-hidden group`}>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-rose-500/10 transition-all duration-700"></div>
@@ -863,7 +947,7 @@ function App() {
                                     <h3 className={`text-sm lg:text-base font-black ${baseTheme.textHead} flex items-center gap-2 uppercase tracking-widest`}>
                                         <History className={theme.text} size={18} /> Últimos Gastos
                                     </h3>
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Operações recentes monitoradas</p>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Registros de saída em tempo real</p>
                                 </div>
                                 <button onClick={() => setActiveTab('transactions')} className={`text-[10px] font-black uppercase tracking-widest ${theme.text} hover:opacity-80 transition-opacity`}>Histórico</button>
                             </div>
@@ -891,7 +975,7 @@ function App() {
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center py-10 opacity-30">
                                         <Layers size={32} className="mb-2" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest italic">Nenhum gasto registrado</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest italic">Nenhum gasto logado</span>
                                     </div>
                                 )}
                             </div>
@@ -904,9 +988,9 @@ function App() {
                                 <PieChartIcon className={theme.text} size={18} /> Por Categoria
                             </h3>
 
-                            <div className="relative flex-1 min-h-[250px] flex items-center justify-center">
+                            <div className="relative min-h-[250px] flex items-center justify-center">
                                 {pieChartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height={250}>
                                         <PieChart>
                                             <Pie 
                                                 data={pieChartData} 
@@ -920,7 +1004,7 @@ function App() {
                                                 stroke="none"
                                             >
                                                 {pieChartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#f59e0b', '#8b5cf6', theme.stroke][index % 5]} />
+                                                    <Cell key={`cell-${index}`} fill={['#6366f1', '#ec4899', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#f43f5e'][index % 7]} />
                                                 ))}
                                             </Pie>
                                             <Tooltip content={<CustomChartTooltip isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />} />
@@ -932,47 +1016,29 @@ function App() {
                             </div>
 
                             {pieChartData.length > 0 && (
-                                <div className="mt-6 space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-2">
-                                    {pieChartData.slice(0, 4).map((entry, index) => (
-                                        <div key={index} className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#6366f1', '#ec4899', '#f59e0b', '#8b5cf6', theme.stroke][index % 5] }}></div>
-                                                <span className={baseTheme.textMuted}>{entry.name}</span>
+                                <div className="mt-8 space-y-5 max-h-[220px] overflow-y-auto custom-scrollbar pr-3">
+                                    {pieChartData.map((entry, index) => {
+                                        const percentage = ((entry.value / totalMonthlyExpense) * 100).toFixed(1);
+                                        const color = ['#6366f1', '#ec4899', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#f43f5e'][index % 7];
+                                        return (
+                                            <div key={index} className="space-y-2">
+                                                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-tighter">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }}></div>
+                                                        <span className={baseTheme.textMuted}>{entry.name}</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className={`${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(entry.value)}</span>
+                                                        <span className="ml-2 text-slate-500 opacity-60">({percentage}%)</span>
+                                                    </div>
+                                                </div>
+                                                <div className={`h-1.5 w-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-100'} rounded-full overflow-hidden`}>
+                                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${percentage}%`, backgroundColor: color }}></div>
+                                                </div>
                                             </div>
-                                            <span className={baseTheme.textHead}>{formatCurrency(entry.value)}</span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* SEÇÃO MAPA DE CRÉDITO (GASTOS POR CARTÃO) */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className={`text-sm lg:text-base font-black ${baseTheme.textHead} flex items-center gap-2 uppercase tracking-widest`}>
-                                <CreditCardIcon className={theme.text} size={18} /> Mapa de Crédito
-                            </h3>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {cardTotals.length > 0 ? (
-                                cardTotals.map(([cardName, total]) => {
-                                    const isHighlight = cardName.toLowerCase().includes('nubank') || cardName.toLowerCase().includes('xp');
-                                    return (
-                                        <div key={cardName} className={`${baseTheme.card} border ${baseTheme.border} p-4 rounded-3xl relative overflow-hidden group hover:scale-[1.02] transition-all`}>
-                                            <div className={`absolute top-0 right-0 w-16 h-16 opacity-5 -mr-4 -mt-4 transition-transform group-hover:scale-110`}>
-                                                <CreditCardIcon size={64} className={isHighlight ? theme.text : 'text-slate-400'} />
-                                            </div>
-                                            <p className={`text-[9px] font-black uppercase tracking-widest ${baseTheme.textMuted} mb-1 truncate pr-6`}>{cardName}</p>
-                                            <p className={`text-sm lg:text-base font-black ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>
-                                                {formatCurrency(total)}
-                                            </p>
-                                            <div className={`h-1 w-12 rounded-full mt-3 ${isHighlight ? theme.primary : 'bg-slate-400/30'}`}></div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div className="col-span-full py-6 text-center opacity-40 italic text-[10px] font-bold uppercase">Nenhum uso de cartão identificado</div>
                             )}
                         </div>
                     </div>
@@ -985,7 +1051,7 @@ function App() {
                                  </div>
                                  <div>
                                      <h4 className={`text-sm font-black ${baseTheme.textHead} uppercase tracking-tighter`}>Suas Metas</h4>
-                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{goals.length} objetivos cibernéticos</p>
+                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{goals.length} objetivos registrados</p>
                                  </div>
                              </div>
                              <button onClick={() => setActiveTab('goals')} className={`p-2 rounded-xl hover:bg-${currentTheme}-500/10 ${theme.text} transition-colors`}>
@@ -1018,7 +1084,7 @@ function App() {
                             <FoxyMascot face="neutral" themeColor={currentTheme} />
                             <div>
                                 <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Fluxo Mensal</h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-bold uppercase tracking-widest mt-1`}>{formatMonth(currentDate)}</p>
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>{formatMonth(currentDate)}</p>
                             </div>
                         </div>
                     </div>
@@ -1043,15 +1109,15 @@ function App() {
                                                             <span className={`text-[9px] font-black uppercase tracking-widest ${baseTheme.textMuted}`}>{t.category} {t.card && `• ${t.card}`}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-4 sm:gap-6">
+                                                    <div className="flex items-center gap-3 sm:gap-6">
                                                         <div className="text-right">
                                                             <p className={`text-base sm:text-xl font-black ${t.type === 'income' ? 'text-emerald-500' : baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</p>
                                                             {t.installmentInfo && <p className={`text-[8px] sm:text-[10px] font-black ${theme.text} uppercase tracking-widest`}>{t.installmentInfo}</p>}
                                                         </div>
                                                         {!isVirtual && (
                                                             <div className="flex gap-2">
-                                                                <button onClick={() => { setEditingTransaction(t); setIsTransModalOpen(true); }} className={`p-2 sm:p-3 rounded-2xl border ${baseTheme.border} text-slate-500 hover:text-${currentTheme}-500 transition-all opacity-0 group-hover:opacity-100 hidden md:block`}><Pencil size={16} /></button>
-                                                                <button onClick={() => handleDelete(t.id, 'Movimentação')} className={`p-2 sm:p-3 rounded-2xl border ${baseTheme.border} text-slate-500 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 hidden md:block`}><Trash2 size={16} /></button>
+                                                                <button onClick={() => { setEditingTransaction(t); setIsTransModalOpen(true); }} className={`p-2 sm:p-3 rounded-2xl border ${baseTheme.border} text-slate-500 hover:text-${currentTheme}-500 transition-all`}><Pencil size={16} /></button>
+                                                                <button onClick={() => handleDelete(t.id, 'Movimentação')} className={`p-2 sm:p-3 rounded-2xl border ${baseTheme.border} text-slate-500 hover:text-rose-500 transition-all`}><Trash2 size={16} /></button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1073,12 +1139,12 @@ function App() {
                             <FoxyMascot face="focused" themeColor={currentTheme} />
                             <div>
                                 <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Parcelados</h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-bold uppercase tracking-widest mt-1`}>Dívidas Ativas no Sistema</p>
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Dívidas no Sistema</p>
                             </div>
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto">
-                            <button onClick={() => setIsPayAllModalOpen(true)} className={`flex-1 sm:flex-none bg-slate-800 text-white px-4 py-3 rounded-2xl font-black text-[10px] active:scale-95 transition-all flex items-center justify-center gap-2 border border-slate-700 uppercase tracking-widest`}><CheckCircle2 size={16} /> Liquidar Mês</button>
-                            <button onClick={() => setIsInstModalOpen(true)} className={`flex-1 sm:flex-none ${theme.primary} text-white px-4 py-3 rounded-2xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest`}><Plus size={16} /> Adicionar</button>
+                            <button onClick={() => setIsPayAllModalOpen(true)} className={`flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2.5 rounded-2xl font-black text-[10px] active:scale-95 transition-all flex items-center justify-center gap-2 border border-slate-700 uppercase tracking-widest`}><CheckCircle2 size={16} /> Liquidar Mês</button>
+                            <button onClick={() => setIsInstModalOpen(true)} className={`flex-1 sm:flex-none ${theme.primary} text-white px-4 py-2.5 rounded-2xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest`}><Plus size={16} /> Adicionar</button>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1128,10 +1194,10 @@ function App() {
                             <FoxyMascot face="analytical" themeColor={currentTheme} />
                             <div>
                                 <h2 className={`text-3xl font-black ${baseTheme.textHead} tracking-tight`}>Custos Fixos</h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-bold uppercase tracking-widest mt-1`}>Assinaturas e Recorrências</p>
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Assinaturas e Recorrências</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsSubModalOpen(true)} className={`${theme.primary} text-white px-6 py-3 rounded-2xl font-black text-xs shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest w-full sm:w-auto justify-center`}><Plus size={18} /> Adicionar Fixo</button>
+                        <button onClick={() => setIsSubModalOpen(true)} className={`${theme.primary} text-white px-5 py-2.5 rounded-2xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest w-full sm:w-auto justify-center`}><Plus size={16} /> Adicionar Fixo</button>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-4">
@@ -1181,9 +1247,9 @@ function App() {
                                 <FoxyMascot face="surprised" themeColor={currentTheme} size="lg" />
                             </div>
                             <h2 className={`text-2xl sm:text-3xl font-black ${baseTheme.textHead} tracking-tighter uppercase`}>Sua voz é o nosso código</h2>
-                            <p className="text-slate-500 font-bold leading-relaxed max-w-sm mx-auto uppercase text-[10px] tracking-widest mt-2">Foxy está de ouvidos atentos para suas ideias cibernéticas.</p>
+                            <p className="text-slate-500 font-bold leading-relaxed max-w-sm mx-auto uppercase text-[10px] tracking-widest mt-2">Foxy está de ouvidos atentos para suas sugestões.</p>
                         </div>
-                        <button onClick={() => setIsFeedbackModalOpen(true)} className={`w-full py-5 ${theme.primary} text-white font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 group active:scale-95 uppercase tracking-widest text-xs`}>
+                        <button onClick={() => setIsFeedbackModalOpen(true)} className={`w-full py-5 ${theme.primary} text-white font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 group active:scale-95 uppercase tracking-widest text-[10px]`}>
                             ABRIR FEEDBACK
                             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </button>
@@ -1197,8 +1263,8 @@ function App() {
                         <div className="flex justify-center mb-6">
                             <FoxyMascot face="happy" themeColor={currentTheme} size="lg" />
                         </div>
-                        <h2 className={`text-4xl lg:text-5xl font-black ${baseTheme.textHead} tracking-tighter uppercase`}>EVOLUÇÃO <span className={theme.text}>NEON</span></h2>
-                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-2">A raposa não para de atualizar o sistema.</p>
+                        <h2 className={`text-4xl lg:text-5xl font-black ${baseTheme.textHead} tracking-tighter uppercase`}>EVOLUÇÃO <span className={theme.text}>FINAN</span></h2>
+                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-2">Novas atualizações injetadas no sistema.</p>
                     </div>
                     <div className="space-y-8">
                         {appUpdates.map((update: AppUpdate, index) => (
@@ -1230,11 +1296,11 @@ function App() {
                         <div className="flex items-center gap-4">
                             <FoxyMascot face="focused" themeColor={currentTheme} />
                             <div>
-                                <h2 className={`text-4xl font-black ${baseTheme.textHead} tracking-tight`}>Metas</h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-bold uppercase tracking-widest mt-1`}>Foco e Objetivos</p>
+                                <h2 className={`text-3xl lg:text-4xl font-black ${baseTheme.textHead} tracking-tight`}>Metas</h2>
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Objetivos e Reserva</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsGoalModalOpen(true)} className={`${theme.primary} text-white px-6 py-4 rounded-2xl font-black text-xs shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest`}><Plus size={20} /> Nova Meta</button>
+                        <button onClick={() => setIsGoalModalOpen(true)} className={`${theme.primary} text-white px-4 py-2 rounded-xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest`}><Plus size={14} /> Nova Meta</button>
                     </div>
                     {goals.length === 0 ? (
                         <EmptyState themeColor={currentTheme} title="Sonhos sem data?" message="Crie metas para que a Foxy te ajude a economizar com propósito." isDarkMode={isDarkMode} face="focused" />
@@ -1248,7 +1314,7 @@ function App() {
                                             <div className={`p-5 rounded-3xl bg-${currentTheme}-500/10 border border-${currentTheme}-500/20 text-${currentTheme}-500 group-hover:scale-110 transition-transform`}><Target size={32} /></div>
                                             <div className="flex gap-2">
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleDelete(goal.id, 'Meta'); }} 
+                                                    onClick={(e) => { e.stopPropagation(); handleDelete(goal.id, 'Meta', goal); }} 
                                                     className="p-3 rounded-2xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all"
                                                     title="Excluir Meta"
                                                 >
@@ -1288,11 +1354,11 @@ function App() {
                         <div className="flex items-center gap-4">
                             <FoxyMascot face="analytical" themeColor={currentTheme} />
                             <div>
-                                <h2 className={`text-4xl font-black ${baseTheme.textHead} tracking-tight`}>Patrimônio</h2>
-                                <p className={`${baseTheme.textMuted} text-xs font-bold uppercase tracking-widest mt-1`}>Ativos e Alocação</p>
+                                <h2 className={`text-3xl lg:text-4xl font-black ${baseTheme.textHead} tracking-tight`}>Patrimônio</h2>
+                                <p className={`${baseTheme.textMuted} text-[10px] font-black uppercase tracking-widest mt-1`}>Gestão de Ativos</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsInvestModalOpen(true)} className={`${theme.primary} text-white px-6 py-4 rounded-2xl font-black text-xs shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest`}><Plus size={20} /> Novo Ativo</button>
+                        <button onClick={() => setIsInvestModalOpen(true)} className={`${theme.primary} text-white px-4 py-2 rounded-xl font-black text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2 uppercase tracking-widest`}><Plus size={14} /> Novo Ativo</button>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-4">
@@ -1311,9 +1377,17 @@ function App() {
                                                     <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${style.badge}`}>{inv.type}</span>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className={`text-2xl font-black ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(inv.amount)}</p>
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Atual</p>
+                                            <div className="flex items-center gap-6">
+                                                <div className="text-right">
+                                                    <p className={`text-2xl font-black ${baseTheme.textHead} ${isPrivacyMode ? 'blur-sm' : ''}`}>{formatCurrency(inv.amount)}</p>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Atual</p>
+                                                </div>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleDelete(inv.id, 'Investimento', inv); }} 
+                                                    className="p-3 rounded-2xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -1347,11 +1421,11 @@ function App() {
       <AddInstallmentModal isOpen={isInstModalOpen} onClose={() => setIsInstModalOpen(false)} onSave={handleSaveInstallment} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddSubscriptionModal isOpen={isSubModalOpen} onClose={() => { setIsSubModalOpen(false); setEditingSubscription(null); }} onSave={handleSaveSubscription} initialData={editingSubscription} themeColor={currentTheme} isDarkMode={isDarkMode} userCustomCards={userCustomCards} />
       <AddGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} onSave={async (g) => { const newG = { ...g, id: generateId() }; await saveData('goals', newG); setIsGoalModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
-      <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={async (inv) => { const newInv = { ...inv, id: generateId() }; await saveData('investments', newInv); if (inv.amount > 0) { await addTransactionRecord(`Aporte: ${inv.name}`, inv.amount, 'Investimentos', 'expense'); await saveData('investment_transactions', { id: generateId(), investmentId: newInv.id, amount: inv.amount, date: inv.date, type: 'buy' }); } setIsInvestModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
+      <AddInvestmentModal isOpen={isInvestModalOpen} onClose={() => setIsInvestModalOpen(false)} onSave={async (inv) => { const newInv = { ...inv, id: generateId() }; await saveData('investments', newInv); if (inv.amount > 0) { await addTransactionRecord(`Aporte Investimento: ${inv.name}`, inv.amount, 'Investimentos', 'expense'); await saveData('investment_transactions', { id: generateId(), investmentId: newInv.id, amount: inv.amount, date: inv.date, type: 'buy' }); } setIsInvestModalOpen(false); }} themeColor={currentTheme} isDarkMode={isDarkMode} />
       <GoalDetailsModal isOpen={!!selectedGoalId} onClose={() => setSelectedGoalId(null)} goal={selectedGoal} transactions={goalTransactions} onUpdateBalance={handleUpdateGoalBalance} onDeleteTransaction={(id) => deleteData('goal_transactions', id)} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <InvestmentDetailsModal isOpen={!!selectedInvestmentId} onClose={() => setSelectedInvestmentId(null)} investment={selectedInvestment} transactions={investmentTransactions} onUpdateBalance={handleUpdateInvestmentBalance} onDeleteTransaction={(id) => deleteData('investment_transactions', id)} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
       <FinancialReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} aiAnalysis={aiAnalysis} isAnalyzing={isAnalyzing} chartData={pieChartData} totalIncome={totalMonthlyIncome} totalExpense={totalMonthlyExpense} themeColor={currentTheme} isDarkMode={isDarkMode} isPrivacyMode={isPrivacyMode} />
-      <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false })} isDarkMode={isDarkMode} />
+      <ConfirmModal isOpen={confirmState.isOpen} title={confirmState.title} message={confirmState.message} onConfirm={confirmDelete} onCancel={() => setConfirmState({ ...confirmState, isOpen: false, data: null })} isDarkMode={isDarkMode} />
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} currentName={userName} currentPhoto={userPhoto} onSave={handleProfileUpdate} onDeleteAccount={handleDeleteAccount} themeColor={currentTheme} currentTheme={currentTheme} onSelectTheme={setCurrentTheme} onToggleDarkMode={() => setIsDarkMode(prev => !prev)} isDarkMode={isDarkMode} />
       <ConfirmModal isOpen={isLogoutConfirmOpen} title="Encerrar Sistema" message="A Foxy vai entrar em modo de suspensão. Deseja sair agora?" onConfirm={confirmLogout} onCancel={() => setIsLogoutConfirmOpen(false)} isDarkMode={isDarkMode} confirmText="Sair" cancelText="Ficar" />
       <DelayInstallmentModal isOpen={delayModal.isOpen} onClose={() => setDelayModal({ ...delayModal, isOpen: false })} onConfirm={handleDelayInstallment} installmentName={delayModal.installmentName} themeColor={currentTheme} isDarkMode={isDarkMode} />
